@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Temel Linux Komutları</title>
+  <meta name="description" content="pwd : Kullanıcının o anda hangi dizinde bulunduğunu gösterir. cd  : Aktif dizinin değiştirilmesini sağlar.cat : Dosyanın içeriğini görmemizi sağlar.mkdir : Y...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/06/15/temel-linux-komutlari.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Temel Linux Komutları</h1>
+    <p class="post-meta"><time datetime="2017-06-15T00:00:00+03:00" itemprop="datePublished">Jun 15, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p><code class="highlighter-rouge">pwd</code> : Kullanıcının o anda hangi dizinde bulunduğunu gösterir. <br />
+<code class="highlighter-rouge">cd</code>  : Aktif dizinin değiştirilmesini sağlar.<br />
+<code class="highlighter-rouge">cat</code> : Dosyanın içeriğini görmemizi sağlar.<br />
+<code class="highlighter-rouge">mkdir</code> : Yeni dizin oluşturmayı sağlar. <br />
+<code class="highlighter-rouge">rmdir</code> : Dizin silmeyi sağlar.<br />
+<code class="highlighter-rouge">mv</code>  : Bir dosyayı ya da dosyaları bulunduğu dizinden başka bir dizine taşımak için kullanılır.<br />
+<code class="highlighter-rouge">cp</code>  : Bir dosyayı ya da dosyaları bulunduğu dizinden başka bir dizine kopyalamak için kullanılır.<br />
+<code class="highlighter-rouge">ls</code>  : Aktif dizinin içerisindeki dosya ve alt dizinleri listeler.<br /></p>
+
+<p>      <code class="highlighter-rouge">ls -a</code> : Gizli dosyalarla birlikte aktif dizinin içeriğini listeler.<br />
+      <code class="highlighter-rouge">ls -l</code> : Aktif dizindeki içeriği boyut ve izin bilgileriyle birlikte listeler.<br />
+      <code class="highlighter-rouge">ls -R</code> : Bulunduğumuz dizin içerisindeki tüm alt dizinleri listeler.<br /></p>
+
+<p><code class="highlighter-rouge">rm</code> : Bulunduğumuz dizindeki bir dosyayı silmek için kullanılır.<br />
+<code class="highlighter-rouge">chown</code> : Dosya ya da dosyaların sahibinin değiştirilmesini sağlar.<br /></p>
+
+<p>      <code class="highlighter-rouge">chown -R</code> : Hedef dizindeki tüm dosyaların ve alt dizinlerin sahibinin değiştirilmesini sağlar.<br />
+      <code class="highlighter-rouge">chown -v</code> : Chown komutunun yaptığı tüm işlemleri ve komutun işlemesi sonucunda sahibi değişen ,değişmeyen dosyaları gösterir.<br />
+      <code class="highlighter-rouge">chown -c</code> : Sadece sahipliği değişen dosyaları listeler.<br /></p>
+
+<p><code class="highlighter-rouge">chgrp</code> : Dosya ya da dosyaların gruplarını değiştirmeyi sağlar.<br />
+<code class="highlighter-rouge">chmod</code> : Dosya ya da dizinler için erişim izinlerini değiştirmeyi sağlar.<br /></p>
+
+<p>      <code class="highlighter-rouge">chmod +r</code> : Okuma izni verir.<br />
+      <code class="highlighter-rouge">chmod -w</code> : Yazma izni alır.<br />
+      <code class="highlighter-rouge">chmod +x</code> : Execute izni verir.<br />
+      <strong>not</strong>: <code class="highlighter-rouge">+</code> ifadesi izni aktif eder, <code class="highlighter-rouge">-</code> ifadesi izni iptal eder.<br /></p>
+
+<p><code class="highlighter-rouge">lsmod</code> : Kernel mödüllerini gösterir.<br />
+<code class="highlighter-rouge">lspci</code> : PCI cihazlarını ve özelliklerini gösterir.<br />
+<code class="highlighter-rouge">lsusb</code> : USB cihazlarını ve özelliklerini gösterir.<br />
+<code class="highlighter-rouge">grep</code>  : Bir dosyada kelime, karakter, rakam, sembol aramak için kullanılır.<br />
+<code class="highlighter-rouge">stat</code>  : Bir dosya hakkında detaylı bilgi verir.<br />
+<code class="highlighter-rouge">file</code>  : Dosya tipini gösterir.<br />
+<code class="highlighter-rouge">find</code>  : Dosya arama için kullanılır.<br />
+<code class="highlighter-rouge">locate</code>: Dosyanın bulunduğu dizini gösterir.<br />
+<code class="highlighter-rouge">ps -aux</code> : Sistemde çalışan süreçleri gösterir.<br />
+<code class="highlighter-rouge">uptime</code>  : Sistemin çalışma süresini gösterir.<br />
+<code class="highlighter-rouge">free</code> : Hafıza kullanım durumunu gösterir.<br />
+<code class="highlighter-rouge">fdisk -l</code> : Sabit disk bölümlerini gösterir.<br />
+<code class="highlighter-rouge">netstat -tuna</code> :  Sistemde açık olan portları ve bağlantıları gösterir.<br />
+<code class="highlighter-rouge">uname</code> : Kernel bilgisini gösterir.<br /></p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

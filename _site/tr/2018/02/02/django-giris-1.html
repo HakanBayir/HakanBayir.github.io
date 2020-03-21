@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Django Giriş [ 1 ]</title>
+  <meta name="description" content="Django Nedir ?">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2018/02/02/django-giris-1.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Django Giriş [ 1 ]</h1>
+    <p class="post-meta"><time datetime="2018-02-02T00:00:00+03:00" itemprop="datePublished">Feb 2, 2018</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <center><h3>Django Nedir ?</h3></center>
+
+<p>      Django, Python ile yazılmış, ücretsiz ve açık kaynak kodlu web uygulama geliştirme ortamıdır. Uygulama geliştirmeyi hızlandırmak için gereken bazı ayarlamaları ve dosyaları sizin için otomatik hazır hale getirebilir. Aynı zamanda uygulamanızı ayaklandırmanız için apache, Ngnix gibi farklı bir web server kurmanıza gerek kalmadan, kendi sunucusu ile bu işlemleri gerçekleştirebilir.Bu ortam MVC (Model - View - Controller) yapısına oldukça benzeyen <code class="highlighter-rouge">MVT (Model - View - Template)</code> mimarisi ile çalışmaktadır.</p>
+
+<center><h5>Model</h5></center>
+<p>      Burası, uygulamanın veri ile iletişimde bulunduğu bölümdür. Veritabanı,tablolar, sütunlar için bir temsilci diyebiliriz. Tam olarak veriler burada bulunur diyemesekte buradan temsil edildiğini söyleyebiliriz. Model dosyası içerisinde verilerimizin abstract halleri bulunur. Bu yüzden veritabanı kısmına karşılık gelen yer burasıdır.</p>
+
+<center><h5>View</h5></center>
+<p>      View bölümü için yönetim kısmı diyebiliriz. Burada uygulamanın işlevlerini belirleyecek metodlar/fonksiyonlar yer alır. Modeller ve Template’ler arasında veriyi taşıyabilir ve kullanabilir. Uygulamayı tarayıcıdan çağıracağımız zaman, view kısmında karşılığı olan bir metod bulunmalıdır.Bu metod sayesinde yapılan çağrıya nasıl bir yanıt verileceği belirlenir. İstek yapılan sayfa tarayıcıya buradan gönderilir. Veritabanında yani model kısmında  bulunan veriler, buradaki metodlar ile alınıp istemci tarafına gönderilir.</p>
+
+<center><h5>Template</h5></center>
+<p>      Burası, uygulamanın sunumuyla ilgili yapıların bulunduğu bölümdür. İstemcinin göreceği, front-end işlemlerinin gerçekleştirildiği yerdir. HTML dosyalarımız burada bulunacaktır.</p>
+
+<center><h3>Proje ve Uygulama Oluşturma</h3></center>
+<center><h5>Proje Oluşturma</h5></center>
+<p>      Django-admin, django’nun temel operasyonel işlemlerini yürütmek için geliştirilmiş yardımcı komut satırı uygulamasıdır. Bu uyguluma ile projemizi aşağıdaki gibi oluşturuyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>django-admin startproject practice
+cd practice
+</code></pre></div></div>
+
+<p>      Bu işlemi yaptığımızda bu dizin içerisinde <code class="highlighter-rouge">manage.py</code> isimli bir dosya ve <code class="highlighter-rouge">practice</code> isimli bir dizin oluşur. manage.py dosyası çeşitli parametreler alarak sunucu başlatma, uygulama oluşturma, uygulama için ayarları tanımlama vb. gibi işlemleri yerine getirmemizi sağlar. Örnek dosya yapısı aşağıdaki gibi olacaktır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>---practice
+   ---practice
+     ---__init__.py
+     ---settings.py
+     ---urls.py
+     ---wsgi.py
+   ---manage.py
+</code></pre></div></div>
+
+<p>      Projeyi ayaklandırmak için aşağıdaki gibi <code class="highlighter-rouge">manage.py</code> dosyasını çalıştırmamız gerekiyor. Varsayılan olarak port numarası 8000 olarak belirlenmiştir. Aşağıdaki gibi başlatıldığında 8000 portu üzerinde çalışacaktır. Devamına eklediğiniz numaraya göre port değiştirilebilir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 manage.py runserver
+</code></pre></div></div>
+
+<center><h5>Uygulama Oluşturma</h5></center>
+<p>      Proje oluşturduğumuzda otomatik oluşan <code class="highlighter-rouge">manage.py</code> dosyası django-admin gibi temel işlemlerimizi yerine getirmenin yanı sıra aşağıdaki gibi uygulama oluşturmamızı da sağlar.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 manage.py startapp reverseString
+</code></pre></div></div>
+
+<p>      Bu işlemden sonra dosya yapısı aşağıdaki hali almıştır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>---practice
+   ---practice
+     ---__init__.py
+     ---__pycache__
+     ---settings.py
+     ---urls.py
+     ---wsgi.py
+   ---manage.py
+   ---reverseString
+     ---admin.py
+     ---apps.py
+     ---__init__.py
+     ---migrations
+         ---__init__.py
+     ---models.py
+     ---tests.py
+     ---views.py
+</code></pre></div></div>
+
+<p>      Uygulama oluşturduktan sonra uygulamayı projeye bildirmemiz gerekiyor. Bunu <code class="highlighter-rouge">practice/settings.py</code> dosyası üzerinde yapıyoruz. Burada hazır olarak yüklenmiş diğer uygulamalarda yer alıyor. Kendi uygulamamızın ismini de buraya ekliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#practice/settings.py
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'reverseString',
+]
+</code></pre></div></div>
+
+<p>      Uygulamamızı kök dizine getirmek için bazı işlemler yapmamız gerekiyor. View kısmında bahsettiğim gibi tarayıcıdan herhangi bir dizine gidilirken bir istek yapılmış olur. Bu isteğe karşılık gelen fonksiyon aranır ve içeriğinde yazan işlemler uygulanır. Django ortamında <code class="highlighter-rouge">urls.py</code> dosyaları bulunur ve bu dosyalar bizim url’ler ile ilgili işlemlerimizi düzenler ve yönetir. Tarayıcıdan yazdığımız değer ilk önce buraya düşer. Burada karşılık gelen fonksiyon ismini bulur. O ismi view bölümünde arar ve gereken işlemleri gerçekleştirir. İlk düzenleyeceğimiz dosya <code class="highlighter-rouge">practice/urls.py</code> dosyasıdır. Burada <code class="highlighter-rouge">/admin</code> sayfası için daha önceden tanımlanmış bir ifade bulunmaktadır. Bunun yanına <code class="highlighter-rouge">kök(/)</code> dizin için kendi sayfamızı ekliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#practice/urls.py
+from django.contrib import admin
+from django.conf.urls import url, include
+from reverseString.views import *
+
+urlpatterns = [
+    url('admin/', admin.site.urls),
+    url(r'^$', homepage),
+
+]
+</code></pre></div></div>
+
+<p>      Bu ekleme işleminin ardından, tarayıcıdan kök dizin isteği yapıldığında <code class="highlighter-rouge">homepage</code> adlı fonksiyon aranacaktır. Bu fonksiyonu <code class="highlighter-rouge">reverseString/views.py</code> dosyasına ekleyeceğiz. Yukarıda görüldüğü <code class="highlighter-rouge">from reverseString.views import *</code> yazarak oradaki tüm fonksiyonları buraya import ettik. Şimdi <code class="highlighter-rouge">reverseString/views.py</code> dosyasını aşağıdaki gibi düzenliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#reverseString/views.py
+from django.shortcuts import render,HttpResponse
+
+def homepage(request):
+    return HttpResponse('Hello from Homepage')
+</code></pre></div></div>
+
+<p>      Bu işlemin ardından sunucuyu tekrar çalıştırdığımızda ve kök dizine gittiğimizde <code class="highlighter-rouge">Hello from Homepage</code> mesajı ile karşılaşacağız. Şimdi bir HTML sayfası oluşturalım ve <code class="highlighter-rouge">render()</code> fonksiyonu ile istemci tarafına oluşturduğumuz bu sayfayı getirelim. Öncelikle <code class="highlighter-rouge">reverseString</code> dizini altına <code class="highlighter-rouge">templates</code> adlı bir dizin oluşturalım. Buranın altına da HTML sayfamızı ekleyelim.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mkdir reverseString/templates
+touch reverseString/templates/home.html
+</code></pre></div></div>
+
+<p>      Oluşturduğumuz templates dizini için yol bildirmemiz gerekiyor. Bunun için <code class="highlighter-rouge">practice/settings.py</code> dosyasına gidiyoruz. Dosyayı aşağıdaki gibi düzenledikten sonra templates dizinimiz ulaşılabilir durumda olacaktır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#practice/settings.py
+TEMPLATES = [
+    {
+	'BACKEND': 'django.template.backends.django.DjangoTemplates',
+	'DIRS': [os.path.join(BASE_DIR,'templates')],
+	'APP_DIRS': True,
+	'OPTIONS': {
+	    'context_processors': [
+	        'django.template.context_processors.debug',
+	        'django.template.context_processors.request',
+	        'django.contrib.auth.context_processors.auth',
+	        'django.contrib.messages.context_processors.messages',
+	    ],
+	},
+    },
+]
+</code></pre></div></div>
+
+<p>      Bu işlemi tamamladıktan sonra <code class="highlighter-rouge">reverseString/views.py</code> dosyasına gelip aşağıdaki gibi düzenleyebiliriz. Sunucuyu başlatıp tarayıcıdan tekrar kök dizine gittiğimizde <code class="highlighter-rouge">home.html</code> sayfası ile karşılaşacağız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#reverseString/views.py
+from django.shortcuts import render,HttpResponse
+
+def homepage(request):
+    return render(request,'home.html')
+</code></pre></div></div>
+
+<center><h5>Reverse String Uygulaması</h5></center>
+
+<p>      Yazıyı basit bir uygulama ile sonlandırmak istiyorum. Anasayfa üzerinde input alıp , aldığı inputu tersten yazan basit bir uygulama yazalım.</p>
+
+<p>      Kullanıcı kısmı için <code class="highlighter-rouge">reverseString/templates/home.html</code> dosyasını aşağıdaki gibi düzenliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#reverseString/templates/home.html
+<span class="nt">&lt;html&gt;</span>
+<span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;title&gt;</span>Reverse String Application<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;/head&gt;</span>
+<span class="nt">&lt;center&gt;&lt;h3&gt;</span>Reverse String Application<span class="nt">&lt;/h3&gt;&lt;/center&gt;</span>
+<span class="nt">&lt;hr&gt;</span>
+<span class="nt">&lt;body&gt;</span>
+    <span class="nt">&lt;form</span> <span class="na">action=</span><span class="s">"/get_string/"</span> <span class="na">method=</span><span class="s">"GET"</span><span class="nt">&gt;</span>
+	String    : <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">"text"</span> <span class="na">name=</span><span class="s">"mystring"</span><span class="nt">&gt;&lt;br&gt;&lt;br&gt;</span>
+	<span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">"submit"</span> <span class="na">value=</span><span class="s">"Send"</span><span class="nt">&gt;&lt;br&gt;&lt;br&gt;</span>
+    <span class="nt">&lt;/form&gt;</span>
+<span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+</code></pre></div></div>
+
+<p>      Buradan girilen değer GET metodu ile <code class="highlighter-rouge">/get_string</code> dizinine yani <code class="highlighter-rouge">get_string()</code> fonksiyonuna gönderilecek. Bu yüzden <code class="highlighter-rouge">practice/urls.py</code> ve <code class="highlighter-rouge">reverseString/views.py</code> altında düzenlemeler yapmamız gerekiyor. HTTP GET isteği yapıldığında <code class="highlighter-rouge">/get_string</code> url’i biliniyor olmalı, bu yüzden aşağıdaki gibi url’i ekliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#practice/urls.py
+from django.contrib import admin
+from django.conf.urls import url, include
+from reverseString.views import *
+
+urlpatterns = [
+    url('admin/', admin.site.urls),
+    url(r'^$', homepage),
+    url(r'^get_string/$', get_string),
+
+]
+</code></pre></div></div>
+
+<p>      URL dosyasına bakılıp karşılık gelen fonksiyonun <code class="highlighter-rouge">get_string()</code> olduğu görüldüğünde view bölümünde aranacaktır. Buraya ilgili fonksiyonu ekledikten sonra string’imizi <code class="highlighter-rouge">reverse_string()</code> fonksiyonuna yollayarak ters çevirme işlemini gerçekleştiriyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#reverseString/views.py
+from django.shortcuts import render,HttpResponse
+
+def homepage(request):
+    return render(request,'home.html')
+
+
+def get_string(request):
+    text = request.GET['mystring']
+    text = reverse_string(text)
+    return HttpResponse(text)
+
+def reverse_string(text):
+    return text[::-1]
+</code></pre></div></div>
+
+<center><h3>Sonuç</h3></center>
+
+<p>      Girişin ilk aşamasında url oluşturma, view üzerinde metod tanımlama, template üzerinden gelen veriyi işleyerek geri gönderme ve temel konfigürasyonlar gibi işlemleri gerçekleştirmiş olduk. Bir sonraki django yazısında veritabanı ile ilgili işlemlerden bahsedeceğim.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

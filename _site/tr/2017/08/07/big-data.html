@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Big Data&#39;ya Genel Bakış</title>
+  <meta name="description" content="      Merak ettiğim ve ilgilenmeye çalıştığım bir konu olan Big Datahakkında, sınıf arkadaşım Osman Taşdelen‘in ASELSAN stajı kapsamında yapmış olduğu Big Da...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/08/07/big-data.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Big Data'ya Genel Bakış</h1>
+    <p class="post-meta"><time datetime="2017-08-07T00:00:00+03:00" itemprop="datePublished">Aug 7, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Merak ettiğim ve ilgilenmeye çalıştığım bir konu olan Big Data
+hakkında, sınıf arkadaşım <a href="https://tr.linkedin.com/in/osman-ta%C5%9Fdelen-02b1a6142" style="text-decoration:none;">Osman Taşdelen</a>‘in ASELSAN stajı kapsamında yapmış olduğu <code class="highlighter-rouge">Big Data'ya Genel Bakış</code> adlı çalışmasından alıntılamak isterim.</p>
+
+<h4>Big Data</h4>
+
+<p>      Diskte çok fazla yer kaplayan veri çağrışımı yapsa da aslında tam olarak böyle değildir. Big data sosyal medya paylaşımları, fotoğraf arşivlerimiz, sürekli kayıt aldığımız log dosyaları gibi farklı kaynaklardan elde ettiğimiz tüm bu verilerin anlamlı ve işlevlenebilir hale dönüştürülmüş biçimidir. Mesela; ilaç depolarında yüzbinlerce ilacın adını ve tam olarak nerde bulunduklarını, herhangi bir ilaca ulaşmak istediğimiz zaman yerini doğru bir şekilde bulabilmemizi sağlayan sistemlerin arkasında büyük veriler yatmaktadır.</p>
+
+<p>      Big Data Kullanım Alanları ile ilgili Örnekler;</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. Sosyal medya paylaşımları sayesinde hergün milyonlarca kilobayt veri elde edilmekte
+2. Twitter’da günlük işlenen veri boyutu 7 terabyte’a yaklaşmakta ve günden güne artmaktadır.
+3. Sağlık kuruluşları; hastalarına yönelik bireysel ve kişiselleştirilmiş sağlık hizmetleri sağlayabilmek için bireysel durumdaki verileri kendi sayısal ortamlarında depolamaktadırlar.
+4. Arama motorları sayesinde milyonlarca sayfa arasında en doğru ve en hızlı veriye ulaşabilmemiz için yine aynı şekilde arka taraftaki büyük veriler ve bunların anlamlı hale getirilmeleri yatmaktadır.
+</code></pre></div></div>
+
+<p>      Büyük ölçekli veri işlemek için oluşturulmuş birçok platform vardır. Bunlara  Spark ,Storm Samza, Hadoop örnek verilebilir. Spark veriyi in-memory işlemek ve daha hızlı sonuçlar almak için tasarlarlanmıştır. Diğer platformlara göre bu avantajı vardır. Bu yüzden big data ile ilgili çalışmalar Spark frameworkü kullanılarak yapılmıştır.</p>
+
+<h4>Spark</h4>
+
+<p>      Spark paralel veri işleme frameworküdür. Büyük ölçekli veri işlemek için oluşturulmuş platformdur. Spark, RDD(resilient distributed dataset) konsepti üzerine kurulu bir sistemdir. Bu da kabaca şu anlama gelir “veriler paralel işleniyor”. Spark veriyi teker teker işlemek yerine işlemleri yapan executerlara paylaştırıyor. Böylece RDD’ler üzerinde birden fazla işlem aynı anda paralel olarak yapılabiliyor. Spark’ın hızlı çalışmasının önemli sebeplerinden biri de RDD’lerdir.
+Çalışmada 503 bin satır verinin hılı bir şekilde işlenip gösterilmesi amaçlanmıştır.
+Yapılan çalışmada python dili ile beraber python’ın pyspark kütüphanesi kullanılmıştır. Bu kütüphane sayesinde veriler hızlı bir şekilde işlenebilmiştir.</p>
+
+<p><img src="/img/bigdata/1.png" />
+<img src="/img/bigdata/2.png" />
+<img src="/img/bigdata/3.png" /></p>
+
+<p>      Projede Spark’ı koşturmaya başladığımızda kaç tane RDD bloğunun oluştuğunu, hafızanın ne kadar kullanıldığı bilgisini görebiliyoruz(via localhost:4041 yada localhost:4040)</p>
+
+<p><img src="/img/bigdata/4.png" /></p>
+
+<p>      Şekilde de görüldüğü gibi Spark veriyi teker teker işlemek yerine executerlara paylaştırıp veriyi öyle işliyor. Böylece verilerin paralel işlenmesini sağlıyor. Bu durum da verilerin çok daha kısa bir süre içerisinde veriyi işlememizi sağlıyor.</p>
+
+<p><br /></p>
+
+<p>Yazar : <a href="https://tr.linkedin.com/in/osman-ta%C5%9Fdelen-02b1a6142" style="text-decoration:none;">Osman Taşdelen</a></p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

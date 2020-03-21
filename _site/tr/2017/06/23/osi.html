@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Open Source Interconnection(OSI) Katmanları</title>
+  <meta name="description" content="      OSI modeli öncesinde bilgisayar ağlarında kullanılan diğer model ağlarda bilgisayar üzerinde çalışan yazılımdan kabloya kadar bir çok faktör aynı marka...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/06/23/osi.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Open Source Interconnection(OSI) Katmanları</h1>
+    <p class="post-meta"><time datetime="2017-06-23T00:00:00+03:00" itemprop="datePublished">Jun 23, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      OSI modeli öncesinde bilgisayar ağlarında kullanılan diğer model ağlarda bilgisayar üzerinde çalışan yazılımdan kabloya kadar bir çok faktör aynı marka-model uyumluluğu sağlamak zorundaydı. OSI modeli bu tür sorunları çözmek için geliştirilmiştir. OSI’nin belirlediği bu kurallar sayesinde iki veya daha fazla cihaz haberleşeceği zaman kullanılacak tüm teknolojiler birbiriyle uyumlu olarak çalışır.
+OSI <code class="highlighter-rouge">7</code> katmandan oluşur. Bunlar uygulama, sunum, oturum, ulaşım, ağ, veri-bağlantı, fiziksel katmanlarıdır.</p>
+
+<h4>Uygulama Katmanı</h4>
+
+<p>      Ağ üzerindeki uygulamaların birbirleriyle haberleşmesini sağlayan katmandır. <code class="highlighter-rouge">HTTP, HTTPS, FTP, TFTP, DNS, DHCP, SNMP, SMTP, SSH, RDP, TELNET</code> gibi protokoller bu katmanda çalışır.</p>
+
+<h4>Sunum Katmanı</h4>
+
+<p>      Ağ katmanı ve uygulama katmanı arasında veri akışı olurken veri format doğruluğunu kontrol eder. Değil ise veriyi doğru formata çevirir. Veri sıkıştırma, şifreleme, karakter kodu(ASCII) yorumlama bu katmanda yapılan işlemlerdendir.</p>
+
+<h4>Oturum Katmanı</h4>
+
+<p>      İletişimin her iki tarafı için  bağlantı kurmak, yönetmek ve sonlandırmaktan sorumludur. <code class="highlighter-rouge">NetBIOS</code> protokolü bu katmanda çalışır.</p>
+
+<h4>Ulaşım Katmanı</h4>
+
+<p>      Burada verilerin hedefe ulaştırılma işlemleri yönetilir. Uçtan uca iletişimi sağlayan katmandır. Uygulama ve ağ katmanları arasındaki bağlantıyı sağlar. <code class="highlighter-rouge">TCP</code> ve <code class="highlighter-rouge">UDP</code> bu katmanda çalışan protokollerdir. TCP’ de <code class="highlighter-rouge">3 yönlü el sıkışması</code> mekanizması ile verinin karşı tarafa ulaşıp ulaşmadığını konrol edebiliyoruz. Bu bir anlamda güvenli iletim diyebiliriz. Fakat UDP’ de böyle bir kontrol mekanizması mevcut değildir. Bu katmanın en önemli özelliklerinden biri paketlere port numarası eklemektir.</p>
+
+<h4>Ağ Katmanı</h4>
+
+<p>      Burada başka bir ağa veri gönderimi yapılacağı zaman pakete <code class="highlighter-rouge">router</code> bilgisi eklenir. Mantıksal adresler burada fiziksel adreslere çevirilir. <code class="highlighter-rouge">IPV4, IPV6, ARP, ICMP</code> burada çalışan servislerdir. Bu katmanda pakete ip adresleri eklenir.</p>
+
+<h4>Veri-Bağlantı Katmanı</h4>
+
+<p>      Ağ içi iletişimin sağlandığı katmandır. Burada <code class="highlighter-rouge">switch</code> cihazı görev yapar. Ağ katmanında pakete dönüşen veri burada frame’e dönüşür. Frame içerisinde kaynak ve hedef bilgileri bulunur.</p>
+
+<h4>Fiziksel Katmanı</h4>
+
+<p>      Verilerin bit(1,0 sinyalleri) olarak taşındığı katmandır. <code class="highlighter-rouge">Repeater</code> ve <code class="highlighter-rouge">Hub</code> cihazları burada çalışır.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

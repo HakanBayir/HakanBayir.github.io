@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>HTTP (HyperText Transfer Protocol)</title>
+  <meta name="description" content="      HTTP(Hyber Text Transfer Protocol) web uygulamaları üzerinde dökümanları transfer etmek için geliştirilmiştir.TCP/IP bağlantıları üzerinde iletimgerçek...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/07/14/http.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">HTTP (HyperText Transfer Protocol)</h1>
+    <p class="post-meta"><time datetime="2017-07-14T00:00:00+03:00" itemprop="datePublished">Jul 14, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      HTTP(Hyber Text Transfer Protocol) web uygulamaları üzerinde dökümanları 
+transfer etmek için geliştirilmiştir.<code class="highlighter-rouge">TCP/IP</code> bağlantıları üzerinde iletim
+gerçekleşir. Temel olarak sunucu ve istemci arasında çalışan bir client-server
+modelidir. <code class="highlighter-rouge">Request</code>(istek) ve <code class="highlighter-rouge">Response</code>(cevap) olmak üzere iki çeşit 
+iletişim durumu vardır. İstemci sunucuya bir request mesajı gönderdiğinde 
+sunucu da ona responce mesajı vermesiyle HTTP bağlantısı yapılmış olur.</p>
+
+<h4>HTTP İstek Çeşitleri</h4>
+
+<p><code class="highlighter-rouge">GET</code> : Bu yöntem basit anlamda karşımızdaki sunucudan veri almak için 
+kullanılır. GET isteğinde iletimi yapılan veri POST isteğine göre daha az ve
+sınırlıdır.</p>
+
+<p><code class="highlighter-rouge">POST</code> : Sunucuya veri gönderimi yapmak için kullanılan yöntemdir. Özellikle
+form alanlarına girilmiş verileri uygulamaya göndermek için bu yöntemi 
+kullanırız. Herhangi bir veri boyutu kısıtlaması yoktur.</p>
+
+<p><code class="highlighter-rouge">HEAD</code> : GET metoduna çok benzer fakat alınan bilgi GET kadar kapsamlı 
+değildir. Bir sunucuya HEAD isteği yaptığımızda yanıt olarak durum kodu ve 
+header bilgisi döner.</p>
+
+<p><code class="highlighter-rouge">PUT</code> : Bir web sunucusuna veri gönderip kaynağın üzerinde değişiklik yapıp
+güncellemek için kullanılır.</p>
+
+<p><code class="highlighter-rouge">DELETE</code> : Web sunucusunun içerisindeki herhangi bir dosyayı silme isteği yapmak
+için kullanılır.</p>
+
+<p><code class="highlighter-rouge">CONNECT</code> : Bu yöntem bir kullanıcının HTTP üzerinden bir web sunucusuna 
+bağlantı kurması için kullanılır. Yani hedef ile kaynak arasında bir bağlantı
+sağlar.</p>
+
+<p><code class="highlighter-rouge">OPTIONS</code> : Bir web sunucusunun desteklediği HTTP yöntemlerini görmek için 
+kullanılır.</p>
+
+<p><code class="highlighter-rouge">TRACE</code> : Web sunucusuna HTTP isteği yapılırken hata kontrolü yapıp istemciyi
+bilgilendirmek için kullanılan yöntemdir.</p>
+
+<p>.</p>
+<h4>HTTP Yanıt Çeşitleri</h4>
+
+<p><code class="highlighter-rouge">1xx</code> : Bilgilendirici cevap</p>
+
+<p><code class="highlighter-rouge">2xx</code> : Başarılı durum cevabı</p>
+
+<p><code class="highlighter-rouge">3xx</code> : Yönlendirme</p>
+
+<p><code class="highlighter-rouge">4xx</code> : İstemci hatası</p>
+
+<p><code class="highlighter-rouge">5xx</code> : Sunucu hatası</p>
+
+<p>      Aşağıda bazı örnek cevap tiplerini açıklamaya çalıştım.</p>
+
+<p><code class="highlighter-rouge">200 Ok</code> : İstenilen kaynak bulundu ve başarılı bir şekilde bağlantı kuruldu 
+anlamına gelir.</p>
+
+<p><code class="highlighter-rouge">302 Found</code> : Kaynak başka bir adrese yönlendirildi anlamına gelir.</p>
+
+<p><code class="highlighter-rouge">403 Forbidden</code> : Erişim hakkı olmadığını söyleyen yanıttır.</p>
+
+<p><code class="highlighter-rouge">404 Not found</code> : Gitmek istenilen kaynağın bulunmadığı cevabıdır.</p>
+
+<p><code class="highlighter-rouge">405 Method not allowed</code> : Kullanılan HTTP yönteminin sunucu tarafından 
+desteklenmediği anlamına gelir.</p>
+
+<p><code class="highlighter-rouge">500 Internal server error</code> : Sunucu ile ilgili bir hata olduğunu bildiren 
+cevap tipidir.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

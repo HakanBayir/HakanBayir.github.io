@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Hackfest2016 - Sedna Writeup</title>
+  <meta name="description" content="      Sedna makinesi, herhangi bir tarama gerektirmeden, aldığı ip adresini bize doğrudan veriyor. Makine başladığında CLI’da ip adresi 192.168.0.113 olarak ...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/12/13/sedna.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Hackfest2016 - Sedna Writeup</h1>
+    <p class="post-meta"><time datetime="2017-12-13T00:00:00+03:00" itemprop="datePublished">Dec 13, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Sedna makinesi, herhangi bir tarama gerektirmeden, aldığı ip adresini bize doğrudan veriyor. Makine başladığında CLI’da ip adresi 192.168.0.113 olarak görünüyor. Bu bilgiden yola çıkarak bir nmap taraması başlatıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap -A -T4 192.168.0.113
+</code></pre></div></div>
+
+<p><img src="/img/sedna/nmap.png" /></p>
+
+<p>      80 portu üzerinde çalışan web uygulamayı gördükten sonra tarayıcından  http://192.168.0.113 adresine gidiyoruz. Burada gözümüze çarpan pek bir şey olmuyor. Dirb aracı ile işimize yarayacak farklı dizinler bulmayı hedefliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirb http://192.168.0.113
+</code></pre></div></div>
+
+<p><img src="/img/sedna/dirb.png" /></p>
+
+<p>      Buradan gelen dizinleri dolaşırken bazı CSS vb. metin dosyaları görüyoruz. Bu dosyaları okurken içerisinde versiyon, kullanılan teknoloji vb gibi bilgiler bulmayı hedefliyoruz. Gözümüze bir anahtar kelime takılıyor: <code class="highlighter-rouge">BuilderEngine</code>.</p>
+
+<p><img src="/img/sedna/builderengine.png" /></p>
+
+<p>      Bu teknoloji ile ilgili neler çıkabilir diye google’da arattığımızda uygulamanın zafiyet bulundurduğunu ve hazır bir exploitinin de bulunduğunu görüyoruz. BuilderEngine 3.5.0 sürümü,  <code class="highlighter-rouge">Arbitrary File Upload</code> zafiyeti bulunduruyormuş. Bu sayede upload ettiğimiz zararlı kod ile bir reverse shell bağlantısı almayı hedefliyoruz. Metasploit üzerinde şöyle bir exploit kodu olduğu da gözümüze çarpıyor :  <code class="highlighter-rouge">BuilderEngine Arbitrary File Upload and Execution</code>. Bu exploit kodu ile hedef sistemden bağlantı almayı hedefliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>use use exploit/multi/http/builderengine_upload_exec
+set rhost 192.168.0.113
+run 
+</code></pre></div></div>
+
+<p><img src="/img/sedna/shell.png" /></p>
+
+<p>      Bu işlem sonucu www-data kullanıcısı olarak içerdeyiz. Local exploit aramaktan, suid bitli dosyalara bakmaya kadar bir çok araştırma yaptıktan sonra ilginç dosyaları teker teker araştırmaya başladım. Saatler sonra <code class="highlighter-rouge">/etc/chkrootkit</code> dizini gözüme çarpanlar arasında oldu. README dosyasını okuduğumuzda versiyon bilgisine ulaşacağız.</p>
+
+<p><img src="/img/sedna/chkrootkit-version.png" /></p>
+
+<p>      Bu versiyon ile ilgili google araması yaptığımızda <code class="highlighter-rouge">Chkrootkit 0.49 - Local Privilege Escalation</code> sonucuna ulaşıyoruz.  Metasploit üzerinde exploit’i bulup seçenekleri aşağıdaki gibi düzenliyoruz.</p>
+
+<p><img src="/img/sedna/chkrootkit-options.png" /></p>
+
+<p>      Sedna üzerinde yetki yükseltme işlemi böylece tamamlanmış oluyor. Chkrootkit 0.50 sürümünden önce, /tmp/update adlı bir çalıştırılabilir dosya, root olarak çalıştırılır ve bunun sayesinde bir yetki yükseltme sağlanmıştır.</p>
+
+<p><img src="/img/sedna/root.png" /></p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

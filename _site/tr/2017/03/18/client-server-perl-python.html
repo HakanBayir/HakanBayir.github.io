@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Client-Server Örnekleri (Perl - Python)</title>
+  <meta name="description" content="Perl Client-Server">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/03/18/client-server-perl-python.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Client-Server Örnekleri (Perl - Python)</h1>
+    <p class="post-meta"><time datetime="2017-03-18T00:00:00+03:00" itemprop="datePublished">Mar 18, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h3>Perl Client-Server</h3>
+
+<p>      Burada Perl dilini kullanarak bir <strong>Client-Server</strong> uygulaması gerçekleştirmeye çalıştım. 
+Tabiki olmazsa olmaz diyerek <strong>Socket</strong> kütüphanesini import ediyoruz. 
+<strong>IO::Socket::INET</strong> ,AF_INET (ARPA Internet protocols) domain socketleri için nesne arayüzüdür.
+Bu sınıfı kullanarak bir nesne oluşturacağız. Bu nesne constractoru içerisinde aşağıdaki
+değişkenler bulunabilir.</p>
+
+<ul>
+<li>1. PeerAddr </li>
+<li>2. PeerHost </li>
+<li>3. PeerPort </li>
+<li>4. LocalAddr </li>
+<li>5. LocalHost </li>
+<li>6. LocalPort </li>
+<li>7. Proto </li>
+<li>8. Type </li>
+<li>9. Listen </li>
+<li>10. ReuseAddr </li>
+<li>11. Reuse </li>
+<li>12. ReusePort </li>
+<li>13. Broadcast </li>
+<li>14. Timeout </li>
+<li>15. MultiHomed </li>
+<li>16. Blocking </li>
+</ul>
+
+<p>Biz buradan :</p>
+
+<blockquote>
+  <p><strong>LocalHost</strong> : Yerel makina bağlantı adresi</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>LocalPort</strong> : Yerel makina bağlantı portu</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>Proto</strong>     : Bağlanti Protolü</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>Listen</strong>   :	Dinlemek için queue boyutu</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>PeerAddr</strong>  : Uzak makina bağlantı adresi</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>PeerPort</strong>  : Uzak makine bağlantı portu</p>
+</blockquote>
+
+<p>değişkenlerini kullanacağız.</p>
+
+<p>      Bağlantı kurulacak port numarasını dışarıdan input olarak alınmasını belirledik fakat 
+genelde yüksek numaralı portlar tercih edilir.</p>
+
+<p>      Uygulama basit bir yazışma uygulaması olarak düşünülebilir. Karşı taraf için bir socket
+tanımlayıp  bağlantı beklenmeye başlanır . Bu socket karşı tarafın adresini ve port numarasını 
+içerir. Bağlantı sağlanınca devamında ‘basit’ yazışma kanalına girilir. Burada önce server 
+tarafı ve sonra client tarafı yazmak koşuluyla iletişim sağlanır.</p>
+
+<p><strong>Server Kısmı</strong></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/perl</span>
+
+<span class="k">use</span> <span class="nn">IO::</span><span class="nv">Socket</span><span class="p">;</span>
+<span class="vg">$|</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+<span class="k">print</span> <span class="s">"Port numarası giriniz...\n"</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">$port</span><span class="o">=&lt;</span><span class="bp">STDIN</span><span class="o">&gt;</span><span class="p">;</span>
+
+<span class="nv">$socket</span> <span class="o">=</span> <span class="k">new</span> <span class="nn">IO::Socket::</span><span class="nv">INET</span> <span class="p">(</span>
+<span class="nv">LocalHost</span> <span class="o">=&gt;</span> <span class="s">'127.0.0.1'</span><span class="p">,</span>
+<span class="nv">LocalPort</span> <span class="o">=&gt;</span> <span class="nv">$port</span><span class="p">,</span>
+<span class="nv">Proto</span> <span class="o">=&gt;</span> <span class="s">'tcp'</span><span class="p">,</span>
+<span class="nv">Listen</span> <span class="o">=&gt;</span> <span class="mi">5</span><span class="p">,</span>
+
+<span class="p">);</span>
+
+<span class="nb">die</span> <span class="s">"Port açılamadı!"</span> <span class="k">unless</span> <span class="nv">$socket</span><span class="p">;</span>
+<span class="k">print</span> <span class="s">"Bağlantı bekleniyor...Port : $port\n "</span><span class="p">;</span>
+
+<span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">{</span>
+    	<span class="nv">$client_socket</span> <span class="o">=</span> <span class="s">""</span><span class="p">;</span>
+    	<span class="nv">$client_socket</span> <span class="o">=</span> <span class="nv">$socket</span><span class="o">-&gt;</span><span class="nb">accept</span><span class="p">();</span>
+    	<span class="nv">$peer_address</span> <span class="o">=</span> <span class="nv">$client_socket</span><span class="o">-&gt;</span><span class="nv">peerhost</span><span class="p">();</span>
+    	<span class="nv">$peer_port</span> <span class="o">=</span> <span class="nv">$client_socket</span><span class="o">-&gt;</span><span class="nv">peerport</span><span class="p">();</span>
+
+    	<span class="k">print</span> <span class="s">"\n CTRL Chat Server'a  Bağlantı Kuruldu. ( $peer_address , $peer_port ) \n"</span><span class="p">;</span>
+    	
+<span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">{</span>
+    	<span class="nv">$giden_veri</span> <span class="o">=</span> <span class="o">&lt;</span><span class="bp">STDIN</span><span class="o">&gt;</span><span class="p">;</span>
+	<span class="k">my</span> <span class="nv">$user1</span> <span class="o">=</span> <span class="s">"Hakan: "</span><span class="p">;</span>
+	<span class="nv">$client_socket</span><span class="o">-&gt;</span><span class="nb">send</span><span class="p">(</span><span class="nv">$user1</span><span class="p">);</span>
+    	<span class="nv">$client_socket</span><span class="o">-&gt;</span><span class="nb">send</span><span class="p">(</span><span class="nv">$giden_veri</span><span class="p">);</span>
+    	<span class="nv">$client_socket</span><span class="o">-&gt;</span><span class="nb">recv</span><span class="p">(</span><span class="nv">$gelen_veri</span><span class="p">,</span><span class="mi">30</span><span class="p">);</span>
+    	<span class="k">print</span> <span class="nv">$gelen_veri</span><span class="p">;</span>
+    	<span class="nv">$client_socket</span><span class="o">-&gt;</span><span class="nv">autoflush</span><span class="p">();</span> 
+
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>      <strong>Client</strong> tarafı için yine aynı şekilde bir socket nesnesi oluşturuyoruz. <strong>PeerAddr</strong> olarak görünen yer
+server adresidir. <strong>PeerPort</strong> ise server’ın hangi portundan bağlantı sağlanacağıdır. Burada yine
+dışarıdan port numarasını input alarak ilerledik.Aynı port numarası girildiğinde 
+bağlantı sağlanır. Bağlantı kurulunca yazışma kanalına geçilir ve belirtilen 
+kurallar dahilinde  iletişim sağlanabilir.</p>
+
+<p><strong>Client Kısmı</strong></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/perl</span>
+
+<span class="k">use</span> <span class="nn">IO::</span><span class="nv">Socket</span><span class="p">;</span>
+
+<span class="k">print</span> <span class="s">"Port numarası giriniz...\n"</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">$port</span><span class="o">=&lt;</span><span class="bp">STDIN</span><span class="o">&gt;</span><span class="p">;</span>
+
+
+<span class="nv">$socket</span> <span class="o">=</span> <span class="k">new</span> <span class="nn">IO::Socket::</span><span class="nv">INET</span> <span class="p">(</span>
+	<span class="nv">PeerAddr</span>  <span class="o">=&gt;</span> <span class="s">'127.0.0.1'</span><span class="p">,</span>
+	<span class="nv">PeerPort</span>  <span class="o">=&gt;</span>  <span class="nv">$port</span><span class="p">,</span>
+	<span class="nv">Proto</span> <span class="o">=&gt;</span> <span class="s">'tcp'</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="ow">or</span> <span class="nb">die</span> <span class="s">"Bağlantı Kurulamadı !\n"</span><span class="p">;</span>
+
+<span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">{</span>
+    	<span class="nv">$socket</span><span class="o">-&gt;</span><span class="nb">recv</span><span class="p">(</span><span class="nv">$gelen_veri</span><span class="p">,</span><span class="mi">30</span><span class="p">);</span>
+    	<span class="k">print</span> <span class="nv">$gelen_veri</span><span class="o">.</span><span class="s">"\n"</span><span class="p">;</span>
+    	<span class="nv">$giden_veri</span> <span class="o">=</span> <span class="o">&lt;</span><span class="bp">STDIN</span><span class="o">&gt;</span><span class="p">;</span>
+	<span class="k">my</span> <span class="nv">$user2</span> <span class="o">=</span> <span class="s">"Kullanici : "</span><span class="p">;</span>
+	<span class="nv">$socket</span><span class="o">-&gt;</span><span class="nb">send</span><span class="p">(</span><span class="nv">$user2</span><span class="p">);</span>
+    	<span class="nv">$socket</span><span class="o">-&gt;</span><span class="nb">send</span><span class="p">(</span><span class="nv">$giden_veri</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3>Python Client-Server</h3>
+
+<p><strong>Server Kısmı</strong></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import socket
+import socketserver
+import threading 
+
+class threadexample (threading.Thread): 
+   		def __init__(self, threadID, name):
+   			threading.Thread.__init__(self)
+   			self.threadID=threadID
+   			self.name = name
+   		def run(self):
+   			while True:
+     		a=baglanti.recv(1000)
+     		print(a.decode())
+   
+class threadexample2 (threading.Thread):
+   		def __init__(self, threadID, name):        
+    		threading.Thread.__init__(self)
+    		self.threadID=threadID
+    		self.name = name
+   		def run(self): 
+   			while True:
+       		a=input("Server: ") 
+       		baglanti.send(a.encode())
+
+
+myserver=socket.socket()
+mylocal=socket.gethostname()
+
+myserver.bind((mylocal,3969))
+myserver.listen(5)
+
+while True:
+		baglanti, adress = myserver.accept()
+		print("Bağlantı Sağlandi..."  )
+		print(adress)
+		thread1=threadexample(1,"recv")
+		thread1.start()
+		thread1=threadexample2(2,"send")
+		thread1.start()
+</code></pre></div></div>
+
+<p><strong>Client Kısmı</strong></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import socket
+import sys
+import threading
+
+class threadexample (threading.Thread):
+		def __init__(self, threadID, name):        
+    		threading.Thread.__init__(self)
+    		self.threadID=threadID
+    		self.name = name
+		def run(self):
+    		while True:
+      		a=mysocket.recv(1000)
+      		print(a.decode())
+    
+class threadexample2 (threading.Thread):
+		def __init__(self, threadID, name):    
+     		threading.Thread.__init__(self)
+     		self.threadID=threadID
+     		self.name = name
+		def run(self):        
+    		while True:
+        		a=input("Client: ")
+        		mysocket.send(a.encode())
+
+
+mysocket=socket.socket()
+
+#host="0x6cac60.github.io"
+#addres=socket.gethostbyname(host)
+mylocal=socket.gethostname()
+port=3969
+
+mysocket.connect((mylocal,port))
+a="selam".encode()
+mysocket.send(a)
+#while True: 
+thread1=threadexample(1,"recv")
+thread2=threadexample2(3,"sxend")
+thread1.start()
+thread2.start()
+</code></pre></div></div>
+
+<p>      Bu konu literatürde <strong>socket programlama</strong> olarakta geçer.Bu yazışma programı Socket programlama 
+kapsamında basit bir <strong>Client-Server</strong> uygulamasıdır.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

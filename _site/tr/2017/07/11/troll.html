@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Tr0ll 1 Writeup</title>
+  <meta name="description" content="      Bu yazımda Tr0ll sanal makinesinin çözümünü anlatacağım. Tr0ll’ün aldığı ip adresini bulmak için nmap ile tarama yaptıktan sonra aldığı ip adresini 192...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/07/11/troll.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Tr0ll 1 Writeup</h1>
+    <p class="post-meta"><time datetime="2017-07-11T00:00:00+03:00" itemprop="datePublished">Jul 11, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Bu yazımda <code class="highlighter-rouge">Tr0ll</code> sanal makinesinin çözümünü anlatacağım. Tr0ll’ün aldığı ip adresini bulmak için nmap ile tarama yaptıktan sonra aldığı ip adresini 
+<code class="highlighter-rouge">192.168.1.37</code> olarak görüyoruz.</p>
+
+<p>      Makine için ayrı bir tarama yapıp açık servisleri görüntüleyeceğiz. Burada
+<code class="highlighter-rouge">ftp</code>,<code class="highlighter-rouge">http</code> ve <code class="highlighter-rouge">ssh</code> servisleri açık.</p>
+
+<p><img src="/img/troll/nmap-tarama.png" /></p>
+
+<p>      İlk aklıma gelen <code class="highlighter-rouge">ssh_login</code> brute force ya da 
+metasploitteki <code class="highlighter-rouge">vsftpd</code> ile ilgili exploiti çalıştırmak fakat bunların işe
+yaramayacağına o kadar emin olduğum için http servisine gitmeyi tercih 
+ediyorum. Sonra buradan da hayır gelmez diyerek bir <code class="highlighter-rouge">dirb</code> atayım dedim.</p>
+
+<p><img src="/img/troll/dirb.png" /></p>
+
+<p>      Uygulamanın <code class="highlighter-rouge">robots.txt</code> dosyasını buldum ve <code class="highlighter-rouge">/secret</code> dizini disallow edilmiş. 
+Zaten dirb sonucuna göre de o dizin gelmişti. Buradan o dizine geçiş 
+yaptığımda yine başka bir resim ve yine tatmin edici bir şey yok. Nmap 
+sonucuna göre ftp servisi <code class="highlighter-rouge">anonymous</code> bağlantıya izin veriyormuş. Buradan 
+yürüyeyim dedim ve ftp bağlantısı denedim.</p>
+
+<p><img src="/img/troll/ftp.png" /></p>
+
+<p>      Bağlantı kuruldu ve içeride 
+dizinler arası gezinirken bir <code class="highlighter-rouge">pcap</code> dosyası buldum ve onu çektim. Pcap 
+dosyasını incelerken içeride bir mesaj buldum.</p>
+
+<p><img src="/img/troll/pcap.png" /></p>
+
+<p>      <code class="highlighter-rouge">http://192.168.1.37/sup3rs3cr3tdirlol/</code> adresine gittim ve orada beni gcc
+ile derlenmiş bir dosya bekliyordu. Bu konuda strings atmaktan başka 
+yapabileceğim bir şey yoktu. Çokta işe yarar bir şey yokmuş derken bir mesaj 
+gözüme takıldı. “<code class="highlighter-rouge">Find address 0x0856BF to proceed</code>”.</p>
+
+<p><img src="/img/troll/strings.png" /></p>
+
+<p>      Tarayıcımdan buraya gittiğimde iki dizin karşıma çıkıyor. İlkinde karşıma kullanıcı
+adları olduğunu düşündüğum dosya çıkıyor. Diğer dosya ile ilgili bu dosya password içerir diyordu yanı <code class="highlighter-rouge">Pass.txt</code> de parola olacaktı. Bu şekilde deneme yanılma ile ssh bağlantısı kurdum.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>maleus
+ps-aux
+felux
+Eagle11
+genphlux  -- Definitely not this one
+usmc8892
+blawrg
+wytshadow
+vis1t0r
+`overflow`
+</code></pre></div></div>
+
+<p>      Bu şekilde ssh bağlantısı yaparak içeri overflow kullanıcısı olarak giriş yaptım. Artık gerisi kolaydı Ubuntunun bu sürümünde beni root  yapacak exploiti buldum. gcc de tanımlıydı ,geriye  dosyayı çalıştırıp root olmaktan başka bir şey kalmadı.</p>
+
+<p><img src="/img/troll/root.png" /></p>
+
+<h4>Özet :</h4>
+
+<ol>
+  <li>–Port taraması ile açık servisleri görüntüledim. Burada extra <code class="highlighter-rouge">-A</code> ile tarama yapmam bana ftp servisi ile ilgili daha kapsamlı bilgi verdi.</li>
+  <li>–Http servisine gittim fakat orada secret dizininden başka bir şey bulamadım . Bu yüzden ftp’ye yöneldim. Anonymous bağlantıya izin veriliyordu bu yüzden şifresiz giriş yapabildim. Burada dolanirken lol.pcap adlı dosyayı buldum ve içini incelemeye başladım. Bir şeyler bulmam çok uzun sürmedi mesaj bağırıyordu.</li>
+  <li>–Http üzerinden bulduğum dizine gittim ve orada da beni bir program bekliyordu.</li>
+  <li>–Programa konuyla alakalı bildiğim tek şeyi yaptım ve strings attım. Burada da başka bir mesaj beni farklı bir dizine yonlendirdi.</li>
+  <li>–Gittiğim dizinde kullanıcı isimleri ve şifre vardı. Sırayla deneyerek SSH bağlantısı kurdum</li>
+  <li>–Sonra sisteme uygun exploiti bulup içeride çalıştırdım ve root oldum.</li>
+</ol>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

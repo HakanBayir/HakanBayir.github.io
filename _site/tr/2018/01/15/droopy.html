@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Droopy Writeup</title>
+  <meta name="description" content="      Droopy makinesinin ağ üzerinde aldığı ip adresini bulmak için netdiscover aracı ile bir tarama başlatıyoruz. Hedefin aldığı ip adresi 192.168.0.30 olar...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2018/01/15/droopy.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Droopy Writeup</h1>
+    <p class="post-meta"><time datetime="2018-01-15T00:00:00+03:00" itemprop="datePublished">Jan 15, 2018</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Droopy makinesinin ağ üzerinde aldığı ip adresini bulmak için netdiscover aracı ile bir tarama başlatıyoruz. Hedefin aldığı ip adresi 192.168.0.30 olarak bulunuyor.</p>
+
+<p><img src="/img/droopy/netdiscover.png" /></p>
+
+<p>      İlgili ip adresi için nmap ile ulaşılabilir servislere yönelik bir tarama başlatıyoruz. Bu tarama sonucunda 80 portu üzerinden HTTP servisinin hizmet verdiğini görüyoruz.</p>
+
+<p><img src="/img/droopy/nmap.png" /></p>
+
+<p>      Detaylı nmap taraması bize uygulamanın robots.txt dosyası bulundurduğunu da gösteriyor.</p>
+
+<p><img src="/img/droopy/robots-txt.png" /></p>
+
+<p>      Daha fazla araç kullanmaya gerek kalmadan robots.txt dosyası üzerinde incelemeye başlıyoruz. İlgi çekici birçok dosya arasından <code class="highlighter-rouge">CHANGELOG.txt</code> dosyasında bazı ipuçları olduğu keşfediliyor. Bu dosya ilgili uygulama hakkında versiyon bilgisi içeriyor. Burada bir bilgi sızdırmasından bahsedilebilir.</p>
+
+<p><img src="/img/droopy/changelog.png" /></p>
+
+<p>      Uygulama ve versiyonu hakkında kısa bir araştırma yaptıktan sonra php üzerinden bir <code class="highlighter-rouge">sql injection</code> zafiyeti olduğu gözlemleniyor. Bu zafiyetten yararlanılarak uygulama için yeni kullanıcılar oluşturulup , bu kullanıcılar ile sisteme giriş yapılabiliyor. Uygulama üzerinde yer alan kullanıcı sayfasında <code class="highlighter-rouge">Add Content</code> diyerek <code class="highlighter-rouge">Basic Page</code> seçeneğiyle bir php sayfası oluşturulabiliyor. <code class="highlighter-rouge">#2.Option</code> Buraya yüklenen bir php reverse shell kodu bağlantıyı verecektir. Bunun yanı sıra metasploit üzerindeki exploit için bu seçenek otomatize hale getirilmiştir ve kullanıcı oluşturduktan sonra bağlantıyı vermektedir.</p>
+
+<p><img src="/img/droopy/drupal-exploit.png" /></p>
+
+<p>      Sisteme erişim sağlandıktan sonra www-data kullanıcısı olarak içeride olduğumuzu görüyoruz. Güncel olmayan <code class="highlighter-rouge">13.03</code> sürümünün zafiyetinin istismarı sonucu hedef üzerinde yetki yükseltme işlemi gerçekleştiriyoruz.</p>
+
+<p><img src="/img/droopy/root-exploit.png" /></p>
+
+<h3>#2. Option</h3>
+
+<p>      Burada alınan kullanıcı adları ile sisteme girip manuel bağlantı alma konusundan bahsedilecektir. Exploiti kullanarak user:password ikilisini <code class="highlighter-rouge">ZxgKSjgYki:mEGAEYFYrG</code> olarak inject etmiş bulunuyoruz. Bu bilgiler ile uygulamaya giriş yapacağız. Sonrasında kullanıcı
+panelinde sayfa oluşturma özelliğini kullanacağız.</p>
+
+<p><img src="/img/droopy/drupal-panel.png" /></p>
+
+<p>      Burada eklenen reverse shell kodu ile bağlantı alınmıştır. Aynı işlemleri tekrarlayarak yetki yükseltme gerçekleştirilmiştir.</p>
+
+<p><img src="/img/droopy/panel-root.png" /></p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

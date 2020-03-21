@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Mr. Robot 1 Writeup</title>
+  <meta name="description" content="      Mr.Robot makinesinin açıklamasını okuduğumuzda 3 tane gizlenmiş flag bulmamız gerektiğini anlıyoruz. Başlangıç - Orta Seviye düzeyinde olduğu da açıkla...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/11/23/mr-robot.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Mr. Robot 1 Writeup</h1>
+    <p class="post-meta"><time datetime="2017-11-23T00:00:00+03:00" itemprop="datePublished">Nov 23, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Mr.Robot makinesinin açıklamasını okuduğumuzda 3 tane gizlenmiş flag bulmamız gerektiğini anlıyoruz. Başlangıç - Orta Seviye düzeyinde olduğu da açıklama kısmında belirtiliyor. Mr.Robot’u VirtualBox üzerinde çalıştırdıktan sonra, ağ üzerinde aldığı ip adresini bulmak için netdiscover aracı ile tarama işlemi gerçekleştiriyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>netdiscover -i enp2s0 -r 192.168.0.0/24
+</code></pre></div></div>
+
+<p><img src="/img/mr-robot/netdiscover.png" /></p>
+
+<p>      Bu tarama sonucunda alınan ip adresi 192.168.0.36 olarak görülüyor. Açık servisleri listelemek için detaylı bir nmap taraması yapıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap -sV -sS -A -v -n -Pn -T4 192.168.0.36 
+</code></pre></div></div>
+
+<p><img src="/img/mr-robot/nmap.png" /></p>
+
+<p>      22 numaralı port üzerinde SSH, 80 ve 443 üzerinde HTTP servislerinin çalıştığı görülmüştür. Tarayıcıdan 192.168.0.36 adresine gittimizde pek faydalı bir bilgi ile karşılaştığımız söylenemez. Bu yüzden dirb ve nikto araçlarını kullanarak daha fazla bilgi etmeyi hedefliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirb http://192.168.0.36
+</code></pre></div></div>
+
+<p><img src="/img/mr-robot/dirb.png" /></p>
+
+<p>      Dirb ile dosya ve dizinleri araştırdıktan sonra uygulamanın wordpress bir altyapı üzerine kurulduğunu anlıyoruz. Aklımıza ilk gelen wpscan aracı ile kullanıcı isimleri elde etmeye çalışmak oldu. Elde edilen kullanıcı isimleri ile birlikte sözlük saldırısı gerçekleştirerek yönetim paneline giriş yapılabilir. Wordpress altyapısı ile çalışan blog uygulaması <code class="highlighter-rouge">/0</code> dizini altında çalışıyor.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wpscan --url http://192.168.0.36/0 --enumerate u
+</code></pre></div></div>
+
+<p><img src="/img/mr-robot/wp-user.png" /></p>
+
+<p>      Bu işlem sonucu iki adet kullanıcı adı elde ettik. Bu kullanıcı isimlerini kullanarak sözlük saldırısı gerçekleştireceğiz. Harici bir kelime listesi kullanmayı düşünürken yine dirb taraması sonucu <code class="highlighter-rouge">robots.txt</code> dosyasının varlığı tespit edilmişti. Tarayıcıdan robots.txt dosyasına gidildiğinde bizim için hazırlanmış kelime listesi ile karşılaşıyoruz. Bunun yanı sıra Flag-1’i de unutmayalım. Aynı yerde <code class="highlighter-rouge">key-1-of-3.txt</code> olarak karşımıza çıkıyor.</p>
+
+<p><img src="/img/mr-robot/robots.txt.png" /></p>
+
+<p><img src="/img/mr-robot/flag-1.png" /></p>
+
+<p>      Flag-1’i ve sözlük dosyasını bulduktan sonra, panele giriş için wpscan aracı ile sözlük saldırısı gerçekleştireceğiz. Sözlük dosyasını incelediğimizde çok fazla tekrar eden kelime olduğunu ve işlem süresinin uzun olacağını öngörebiliyoruz. Bu adımda , basit bir linux komutu ile dosyayı olabildiğince sadeleştirilmiştir.</p>
+
+<p><img src="/img/mr-robot/dic.png" /></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wpscan --url 192.168.0.36 --wordlist /home/ctrl/Downloads/fsocity.dic2 --username elliot
+</code></pre></div></div>
+
+<p><img src="/img/mr-robot/wp-password.png" /></p>
+
+<p>      Bu işlem sonucu elliot kullanıcısına ait parola <code class="highlighter-rouge">ER28-0652</code> olarak bulunmuştur. Artık panele giriş yapıp standart bir wordpress uygulamasında kullanılan yöntem olarak zararlı kod yükleme işlemi gerçekleştirilecektir. Bunun için fiziksel sisteme reverse shell veren bir PHP kodu tercih edilmiştir. Wordpress teması editlendikten sonra reverse shell bağlantısı kurulmuştur.</p>
+
+<p><img src="/img/mr-robot/wp-tema.png" /></p>
+
+<p><img src="/img/mr-robot/reverse-shell.png" /></p>
+
+<p>      Sisteme deamon kullanıcısı olarak giriş yapılmıştır. /home/robot dizini altında <code class="highlighter-rouge">key-2-of-3.txt</code> dosyasında ikinci flag değeri bulunmaktadır. Fakat bu dosyayı okumaya yetkimiz henüz bulunmaktadır. Bu dosya robot kullanıcısına aittir ve robot kullancısının parolasının md5 hali, aynı dizindeki <code class="highlighter-rouge">password.raw-md5</code> dosyasında yer almaktadır. Buradaki md5 hash değeri decrypt edildiğinde robot kullancısına ait parola <code class="highlighter-rouge">abcdefghijklmnopqrstuvwxyz</code> olarak bulunmuştur. Bu parola ile giriş yapmak için interactive bir kabuğa ihtiyaç duyulmaktadır. Bu kabuğu elde ettikten sonra sisteme robot kullanıcısı olarak giriş yapılmıştır. Kullanıcı yetkilerine sahip olduktan sonra, Flag-2 elde edilmiştir.</p>
+
+<p><img src="/img/mr-robot/flag-2.png" /></p>
+
+<p>      Son flag’in root kullanıcı haklarıyla okunabileceğini tahmin etmek çok zor değil. Sistemde root olmak ya da bir şekilde root yetkileriyle komut çalıştırmak gerekiyor. İlk adım olarak sistemde suid bitli dosyaları çalıştırmaya yönelik bir arama gerçekleştiriyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>find / -perm -u=s 2&gt;/dev/null
+</code></pre></div></div>
+
+<p><img src="/img/mr-robot/suid.png" /></p>
+
+<p>      /usr/local/bin/ dizini altında nmap’i gördükten sonra içimiz artık rahatlıyor. Nmap’in bu sürümünde interactive modda, sistem üzerinden komut çalıştırılabildiğini biliyoruz. Nmap’e verilen suid bitinden dolayı artık root yetkisi ile komut çalıştırabileceğini de biliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/usr/local/bin/nmap --interactive
+</code></pre></div></div>
+
+<p><img src="/img/mr-robot/flag-3.png" /></p>
+
+<p>      Bu sayede Flag-3 değerini de elde etmiş olduk.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

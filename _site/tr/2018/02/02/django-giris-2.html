@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Django Giriş [ 2 ]</title>
+  <meta name="description" content="Django'da Modeller">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2018/02/02/django-giris-2.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Django Giriş [ 2 ]</h1>
+    <p class="post-meta"><time datetime="2018-02-02T00:00:00+03:00" itemprop="datePublished">Feb 2, 2018</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <center><h3>Django'da Modeller</h3></center>
+
+<p>      Django’da modeller, verilerin kaynağıdır. Burada verilerin özellikleri tutulur ve onlara işaret edilir. Her bir veri tablosu için ayrı bir class tanımlanır. Tabloya ait üyeler ilgili class’ın içerisinde yer alır. Django’da bir model class’ı oluşturduktan sonra buraya dışarıdan erişebilmemiz için bir API sağlanır. Bu API ile veritabanı sorgularımızı kullanabiliriz. Bir önceki yazıda oluşturduğumuz uygulama üzerinde <code class="highlighter-rouge">practice/settings.py</code> dosyasına giderek varsayılan veritabanı bilgisini görebilirsiniz. Aşağıdaki gibi bir çıktı olacaktır. Django default olarak sqlite3 veritabanını kullanır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#practice/settings.py
+DATABASES = {
+    'default': {
+	'ENGINE': 'django.db.backends.sqlite3',
+	'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
+</code></pre></div></div>
+
+<center><h5>Model Oluşturma</h5></center>
+<p>      Bir önceki yazıda oluşturduğumuz projenin üzerine yeni bir uygulama oluşturalım ve modeller üzerinde temel işlemler gerçekleştirelim. Aynı zamanda bu uygulama için kendine ait bir yol belirtelim. Bir önceki projede uygulama kök dizin üzerinden hizmet veriyordu. Bu uygulama için kendine ait bir <code class="highlighter-rouge">urls.py</code> dosyası oluşturalım ve farklı bir dizin üzerinden hizmet vermesini sağlayalım. Öncelikle aşağıdaki gibi yeni uygulamamızı oluşturuyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 manage.py startapp databaseOperations
+</code></pre></div></div>
+
+<p>      Yeni uygulamamızı da <code class="highlighter-rouge">practice/settings.py</code> dosyasına aşağıdaki gibi bildirmemiz gerekiyor.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#practice/settings.py
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'reverseString',
+    'databaseOperations',
+]
+</code></pre></div></div>
+
+<p>      Şimdi yeni uygulamamız için bir <code class="highlighter-rouge">urls.py</code> dosyası tanımlayalım. Bu dosya varsayılan olarak gelmeyecektir. Kendimiz oluşturmamız gerekiyor.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>touch databaseOperations/urls.py
+</code></pre></div></div>
+
+<p>      Bu işlemi gerçekleştirmek bir dizi operasyon gerektiriyor. Öncelikle yeni uygulamamızın içerisinde oluşturduğumuz <code class="highlighter-rouge">databaseOperations/urls.py</code> aşağıdaki gibi düzenleyeceğiz. Bu sayede tarayıcı üzerinde <code class="highlighter-rouge">/databaseOperations</code> sorgusu yapıldığında hangi fonksiyonun çalışacağı belirlenecek.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#databaseOperations/urls.py
+from django.contrib import admin
+from django.conf.urls import url
+from databaseOperations.views import *
+
+urlpatterns = [
+    url(r'^$', databaseOperationsHomepage),
+
+]
+</code></pre></div></div>
+
+<p>      Şimdi de <code class="highlighter-rouge">databaseOperations/views.py</code> üzerinde ilgili metodun ne işlem yapacağını tanımlayacağız. URL dosyasında karşılığı bulunan fonksiyonu views bölümüne gelip ne yapması gerektiğini arayacak.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#databaseOperations/views.py
+from django.shortcuts import render,HttpResponse
+
+def databaseOperationsHomepage(request):
+    return HttpResponse('Database Operations Homepage')
+</code></pre></div></div>
+
+<p>      Son olarak <code class="highlighter-rouge">practice/urls.py</code> dosyasına yeni uygulamamızdaki url’leri eklememiz gerekiyor. Çünkü sorgu kök dizinden başlayacağı için önce buradan nereye bakılması gerektiğine karar verilecek.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#practice/urls.py
+from django.contrib import admin
+from django.conf.urls import url, include
+from reverseString.views import *
+from databaseOperations.views import *
+
+urlpatterns = [
+    url('admin/', admin.site.urls),
+    url(r'^$', homepage),
+    url(r'^get_string/$', get_string),
+
+    url(r'^databaseOperations/', include('databaseOperations.urls')),
+
+]
+</code></pre></div></div>
+
+<p>      Bu işlemlerin ardından tarayıcıdan <code class="highlighter-rouge">127.0.0.1:8000/databaseOperations</code> sayfasına gildiğinde <code class="highlighter-rouge">Database Operations Homepage</code> mesajı alınacaktır.</p>
+
+<p>      Şimdi <code class="highlighter-rouge">databaseOperations/models.py</code> dosyasına giderek ilk model sınıfımızı oluşturalım. Burada her sınıf bir tabloya işaret ediyor.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#databaseOperations/models.py
+from django.db import models
+
+class OwaspTopTen(models.Model):
+    number = models.IntegerField(max_length=20)
+    vulnerability_name = models.TextField(max_length=50)
+    vulnerability_description = models.TextField(max_length=200)
+</code></pre></div></div>
+
+<p>      Değişikliklerin kayıt edilmesi ve model sınıfının oluşturulması için aşağıdaki adımları izliyoruz. Migration, Django’da modeller ile ilgili yaptığımız değişiklikleri duyurma yöntemidir. Migration işlemlerini uygulamak veya kaldırmak için <code class="highlighter-rouge">migrate</code>, yeni migration oluşturmak için de <code class="highlighter-rouge">makemigration</code> parametresini kullanırız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 manage.py makemigrations
+python3 manage.py migrate
+</code></pre></div></div>
+
+<center><h5>Database API</h5></center>
+<p>       Şimdi API üzerinden tablomuza bilgiler ekleyelim ve bu bilgileri bir HTML sayfası oluşturarak görüntüleyelim. API’yi başlatmak ve veri eklemek için aşağıdaki işlemleri gerçekleştiriyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 manage.py shell
+
+&gt;&gt;&gt;from databaseOperations.models import OwaspTopTen
+&gt;&gt;&gt;OwaspTopTen.objects.create(number=1,vulnerability_name='Injection',vulnerability_description='Injection flaws, such as SQL, NoSQL, OS, and LDAP injection, occur when untrusted data is sent to an interpreter as part of a command or query.')
+&gt;&gt;&gt;OwaspTopTen.objects.create(number=2,vulnerability_name='Broken Authentication',vulnerability_description='Application functions related to authentication and session management are often implemented incorrectly, allowing attackers to compromise passwords, keys, or session tokens, or to exploit other implementation flaws to assume other users identities temporarily or permanently.'
+&gt;&gt;&gt;OwaspTopTen.objects.create(number=3,vulnerability_name='Sensitive Data Exposure',vulnerability_description='Many web applications and APIs do not properly protect sensitive data, such as financial, healthcare, and PII.')
+</code></pre></div></div>
+
+<p>      Database API üzerinden oluşturduğumuz bilgileri bir HTML sayfasına çağırıp listeleyim. Bunun için önce bir <code class="highlighter-rouge">databaseOperations</code> dizini altına bir  <code class="highlighter-rouge">templates</code> dizini oluşturacağız. Onun altına da anasayfamız olmasını istediğimiz bir görüntüleme sayfası oluşturacağız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mkdir databaseOperations/templates
+touch databaseOperations/templates/owasptop10.html
+</code></pre></div></div>
+
+<center><h5>Owasp Top 10 Uygulaması</h5></center>
+
+<p>      Bunun yanı sıra <code class="highlighter-rouge">databaseOperations/views.py</code> dosyasını da oluşturduğumuz HTML sayfasını çağıracağı şekilde aşağıdaki gibi düzenliyoruz. Bu adımdan sonra veritabanı sorguları ile tablomuzdaki değerleri aşağıdaki gibi çağıracağız ve HTML sayfasına göndereceğiz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#databaseOperations/views.py
+from django.shortcuts import render,HttpResponse
+from .models import OwaspTopTen
+
+def databaseOperationsHomepage(request):
+    data = OwaspTopTen.objects.all()
+    return render(request,'owasptop10.html',{'info': data})
+</code></pre></div></div>
+
+<p>      <code class="highlighter-rouge">databaseOperations/templates/owasptop10.html</code> sayfasını da aşağıdaki gibi düzenleyerek verileri buraya aktarıp görüntülüyoruz. Kodu çalıştırırken  <code class="highlighter-rouge">'</code>
+ işaretini kaldırmayı unutmayın.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#databaseOperations/templates/owasptop10.html
+<span class="nt">&lt;html&gt;</span>
+<span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;title&gt;</span>Owasp Top 10<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;/head&gt;</span>
+<span class="nt">&lt;center&gt;&lt;h3&gt;</span>Owasp Top 10<span class="nt">&lt;/h3&gt;&lt;/center&gt;</span>
+<span class="nt">&lt;hr&gt;</span>
+<span class="nt">&lt;body&gt;</span>
+{'% for vuln in info %} 
+{'{vuln.number}} : 
+{'{vuln.vulnerability_name}}
+<span class="nt">&lt;br&gt;</span>	
+{'{vuln.vulnerability_description}}
+<span class="nt">&lt;br&gt;</span>
+{'% endfor %}
+
+<span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>	
+</code></pre></div></div>
+
+<p><br />
+<img src="/img/django/django-owasp.png" />
+<br /></p>
+
+<center><h3>Sonuç</h3></center>
+<p>      Bu yazıda Django’da model oluşturup shell API ile bu model sınıflarına veri ekledik. Bunun yanı sıra template üzerine veri aktarımı gerçekleştirdik. Bir sonraki yazı da Django’da formlar ile ilgili işlemler üzerinde duracağız.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

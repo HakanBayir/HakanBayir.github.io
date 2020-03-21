@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Volatility</title>
+  <meta name="description" content="Ram Capturing">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/05/09/volatility.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Volatility</h1>
+    <p class="post-meta"><time datetime="2017-05-09T00:00:00+03:00" itemprop="datePublished">May 9, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h4>Ram Capturing</h4>
+
+<p>      Windows 7 makine de memory(RAM) dump etmek için <strong>DumpIt</strong> aracını kullanacağım. 
+Aracı <a href="https://www.downloadcrew.com/article/23854-dumpit">buradan</a> indirebilirsiniz.
+Windows7 makinede cmd açarak bulunduğu dizine gelip DumpIt.exe’yi çalıştırıyoruz. Memory
+Dump işlemi başlıyor ve belli bir süre sonra kapatıp durduruyoruz. DumpIt.exe’nin bulunduğu dizinde
+oluşan <strong>RAW</strong> dosyasını görüyoruz ve bu bizim Volatility ile inceleyeceğimiz <strong>Memory Dump File</strong>‘mız olacak.</p>
+
+<h4>Volatility Analiz</h4>
+
+<p>      İlk olarak volatility ile RAW bilgilerine bakmak için şu komutu kullanıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC.raw imageinfo
+</code></pre></div></div>
+
+<p><img src="/img/volatility/imageinfo.png" /></p>
+
+<p>      Sonrasında profile göre <strong>KDBGSCAN</strong> yapıyoruz. Kdbgscan Olası KDBG değerlerini bulmamızı sağlar.
+KDBG, hata ayıklama amacıyla Windows çekirdeği tarafından tutulan bir yapıdır. 
+Çalışmakta olan süreçlerin ve yüklenen çekirdek modüllerinin bir listesini içerir. 
+Ayrıca hangi Hizmet Paketi’nin yüklendiğini ve bellek modelini (32-bit vs 64-bit) 
+belirleyebilmenizi sağlayan bazı sürüm bilgilerini de içerir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 kdbgscan
+volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 pslist
+</code></pre></div></div>
+
+<p><img src="/img/volatility/kdbgscan.png" />
+<img src="/img/volatility/pslist1.png" />
+<img src="/img/volatility/pslist2.png" /></p>
+
+<p>      KDBG değerinide belirledikten sonra o anda çalışan processleri görüntülemek için <strong>PSLIST</strong> komutunu
+ekledim. Burada en altta <strong>DumpIt.exe</strong> görünüyor, o an kullandığımız DUMP aracı olarak. Bunun yanında 
+tarayıcılar veya diğer çeşitli programları görüyoruz.</p>
+
+<p>      32 ve 64 bit Windows Vista, Windows 2008 Server ve Windows 7 RAM imajlarında ağ programlarını
+taramak için <strong>NETSCAN</strong> komutunu kullanırız. Bu tarama, TCP bitiş noktalarını, TCP dinleyicilerini, 
+UDP uç noktalarını ve UDP dinleyicilerini bulur. IPv4 ve IPv6 arasında ayrım yapar, yerel ve
+uzak IP’yi (varsa), yerel ve uzaktaki bağlantı noktasını (varsa), soketin bağlı olduğu veya
+bağlantı kurulduğu zamanı ve geçerli durumunu (TCP bağlantıları için)  gösterir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 netscan
+</code></pre></div></div>
+
+<p><img src="/img/volatility/netscan.png" /></p>
+
+<p>      Fiziksel bellekteki FILE_OBJECT’leri bulmak için <strong>FILESCAN</strong>
+komutunu kullanırız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 filescan
+</code></pre></div></div>
+
+<p><img src="/img/volatility/filescan.png" /></p>
+
+<p>      Bir sonraki taramamız <strong>PSSCAN</strong> taraması. Bu daha önce sona eren işlemleri (etkin olmayan) ve 
+bir rootkit tarafından gizlenmiş veya bağlantısız olan işlemleri bulabilir. Diğer yandan da
+işlem listesini bir ağaç yapısında görüntülemek için, <strong>PSTREE</strong> komutunu kullanırız. Bu süreçleri pslist ile 
+aynı tekniği kullanarak numaralandırır, bu nedenle de gizli veya bağlantısız süreçler gösterilmez.
+Child process’ler, girinti ve süreler kullanılarak belirtilir</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 psscan
+volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 pstree
+</code></pre></div></div>
+
+<p><img src="/img/volatility/pstree.png" /></p>
+
+<h4>Uygulama</h4>
+
+<p>      Bellekte kayıt defterinin sanal adreslerini ve karşılık gelen disk üzerindeki 
+tam yolları bulmak için, <strong>HIVELIST</strong> komutunu kullanırız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 hivelist
+</code></pre></div></div>
+
+<p><img src="/img/volatility/hivelist.png" /></p>
+
+<p>      Burada bir uygulama gerçekleştireceğim. Windows makinenin kullanıcı parolasını dump edip 
+kırmaya çalışacağız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0  hashdump -s 0xfffff8a000aa2010 -y 0xfffff8a000023010 &gt; hash.txt
+</code></pre></div></div>
+
+<p><img src="/img/volatility/hashdump.png" /></p>
+
+<p>      Burada -s parametresi \SystemRoot\System32\Config\SAM kısmını, -y parametresi de 
+\REGISTRY\MACHINE\SYSTEM kısmını alıyor . Hash değerlerini aldıktan sonra <strong>OPHCRACK</strong>
+aracını kullanarak parolayı buluyoruz.</p>
+
+<p><img src="/img/volatility/ophcrack.png" /></p>
+
+<p>      Bir işlemin yüklenmiş DLL’lerini görüntülemek için <strong>DLLLIST</strong> komutunu kullanırız.
+Bir süreç LoadLibrary (veya LdrLoadDll gibi bazı türevleri) çağırdığında DLL’ler otomatik 
+olarak bu listeye eklenir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 dlllist
+volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 dlllist -p 2624
+volatility -f ZAFIYETLI-PC2.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 dlldump  --pid 2356 --dump-dir=.
+</code></pre></div></div>
+
+<p><img src="/img/volatility/dlllist.png" /></p>
+
+<p>      Bir işleme ait açık handles’ları görüntülemek için, <strong>HANDLES</strong> komutunu kullanırız. Bu, dosyalar, 
+kayıt defteri anahtarları, muteksler, adlandırılmış kanallar, olaylar, pencere istasyonları, 
+masaüstleri, iş parçacıkları ve diğer tüm yürütülebilir nesne türleri için geçerlidir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC2.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 handles -p 2624
+</code></pre></div></div>
+
+<p><img src="/img/volatility/handles.png" /></p>
+
+<p>      UserAssist yardımcı programı, bir Windows makinesinde çalıştırılan programların sayısını,son yürütme 
+tarihini ve saatini içeren bir program tablosunu görüntüler. Windows Gezgini, bu bilgileri UserAssist kayıt defteri girdileri içinde tutar.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 userassist
+</code></pre></div></div>
+
+<p><img src="/img/volatility/userassist.png" /></p>
+
+<p>      <strong>CMDSCAN</strong> eklentisi, bir konsol kabuğu (cmd.exe) üzerinden girilen komutlar için
+XP / 2003 / Vista / 2008’de csrss.exe ve Windows 7’de conhost.exe belleklerini arar.</p>
+
+<p>      MaxHistory değerinin cmd.exe penceresinin sol 
+üst köşesinde sağ tıklayarak Özellikler’e gelerek değiştirilebilir. 
+Windows sistemlerinde varsayılan değer 50’dir, yani en son 50 komut kaydedilir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  volatility -f ZAFIYETLI-PC.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 cmdscan
+volatility -f ZAFIYETLI-PC3.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 consoles
+</code></pre></div></div>
+
+<p><img src="/img/volatility/consoles.png" /></p>
+
+<p>      <strong>IEHISTORY</strong> eklentisi IE geçmişi önbellek dosyalarının parçalarını kurtarır. 
+Erişilen temel bağlantıları (FTP veya HTTP üzerinden), bulabilirsiniz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC2.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 iehistory
+</code></pre></div></div>
+
+<p><img src="/img/volatility/iehistory.png" /></p>
+
+<p>      Çalışan Windows Servislerini görmek için <strong>SVCSCAN</strong> taraması yapıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC2.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 svcscan
+</code></pre></div></div>
+
+<p><img src="/img/volatility/svcscan.png" /></p>
+
+<p>      Fiziksel bellekteki DRIVER_OBJECT’leri bulmak için, <strong>DRIVERSCAN</strong> komutunu kullanırız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  volatility -f ZAFIYETLI-PC2.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 driverscan
+</code></pre></div></div>
+
+<p><img src="/img/volatility/driverscan.png" /></p>
+
+<p>      Bir işlemle ilişkili SID’leri (Güvenlik Tanımlayıcıları) görüntülemek için, <strong>GETSIDS</strong> komutunu 
+kullanırız. Diğer şeylerin yanı sıra, bu, kötü niyetle  ayrıcalıklara ve hangi süreçlerin 
+belirli kullanıcılara ait olduğunu belirlemenize yardımcı olabilir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC2.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 getsids
+</code></pre></div></div>
+
+<p><img src="/img/volatility/getsids.png" /></p>
+
+<p>      Tek bir dosyaya bir süreçte yerleşik tüm sayfaları ayıklamak için , <strong>MEMDUMP</strong> komutunu kullanırız. 
+Çıkış dizinini -D veya –dump-dir = DIR ile sağlarız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC3.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 memdump -p  1804 -D RECOVER
+</code></pre></div></div>
+
+<p>      Bir işlemin yürütülebilir dosyasını çıkarmak için <strong>PROCDUMP</strong> komutunu kullanırız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC3.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 procdump -p  1804 -D RECOVER
+</code></pre></div></div>
+
+<p><img src="/img/volatility/procdump.png" /></p>
+
+<h4>Uygulama</h4>
+
+<p>      Ram imajı alınırken arkada <strong>paint.exe</strong> açacağız ve bunun RAM’e yansımasını inceleyeceğiz.
+Aldığımız RAM imajından <strong>mspaint.exe</strong> için memory dump yapıyoruz. Paint için <strong>PID</strong> numarasını 
+buluyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>volatility -f ZAFIYETLI-PC5.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 psxview
+
+
+volatility -f ZAFIYETLI-PC5.raw --profile=Win7SP1x64 --kdbg=0xf80001a570a0 memdump -p  2724 -D RECOVER
+</code></pre></div></div>
+
+<p>      Sonrasında burada çıkan <strong>.dmp</strong> uzantılı dump dosyasını <strong>.data</strong> dosyasını çeviriyoruz. Ve GIMP’te açıyoruz.</p>
+
+<p>NOT: mspaint.exe için çalışırken görev yöneticisine giderek <strong>Applications</strong> bölümüne gelip
+sağ tıklayarak <strong>CREATE DUMP FILE</strong> diyerekte dump dosyası alabiliriz.</p>
+
+<p>      <strong>GIMP</strong> ‘te offset değerleriyle oynayarak anlamlı bir şey bulmaya çalışırken <strong>test_FLAG</strong>‘i bulmuş oluyoruz.</p>
+
+<p><img src="/img/volatility/flag.png" /></p>
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

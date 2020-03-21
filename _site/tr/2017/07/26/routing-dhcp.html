@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Routing ve DHCP Konfigürasyonu</title>
+  <meta name="description" content="      Stajın belli bir döneminde ödev olarak verilen network topolojilerinden birini anlatacağım. Staj raporumdan alıntı yapıyorum. Bu yüzden anlatım şekli d...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/07/26/routing-dhcp.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Routing ve DHCP Konfigürasyonu</h1>
+    <p class="post-meta"><time datetime="2017-07-26T00:00:00+03:00" itemprop="datePublished">Jul 26, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Stajın belli bir döneminde ödev olarak verilen network topolojilerinden birini anlatacağım. Staj raporumdan alıntı yapıyorum. Bu yüzden anlatım şekli diğer yazılarıma göre farklı(kasıntı) oldu.</p>
+
+<p>      Projede dört router kullanılarak dört farklı network oluşturuldu. Aynı zamanda bu routerların arasında da ayrı networkler oluşturuldu. Toplamda dört router, dört switch, sekiz client cihazı ve üç tane de server kullanıldı. Routing protokolü olarak <code class="highlighter-rouge">EIGRP 20</code> tercih edildi. IP adresleri dağıtımı <code class="highlighter-rouge">DHCP server</code> tarafından yapıldı. Bunun yanı sıra İzmir network için router üzerinden DHCP konfigürasyonu yapıldı. Copper Straight-Through ve Copper Cross-Over kablo tipleri kullanıldı.
+<img src="/img/routing-dhcp/topology.png" /></p>
+
+<h4>Konfigürasyonlar:</h4>
+
+<p>      Cisco Packet tracer üzerindeki topolojide kullanılacak router  2911 modeli olarak seçildi. Switch için ise 2960-24TT modeli kullanıldı.Önce tüm network cihazlarını yerleştirip kablo bağlantılarını yaptıktan sonra konfigürasyon işlemi gerçekleştirildi. Her bir router’ın arkasına birer switch eklendi ve diğer network cihazlarını bu switch’e bağlayıp iletişimi sağlandı. Router ve switch arası bağlantıyı sağlamak için copper-cross-over tipi kablo kullanıldı. Routerlar için extra bir düzenleme yapılması gerekiyor. Buradaki routerlar için default olarak serial kablo girişi bulunmamaktadır. O yüzden kart eklemesi yapılması gerekir. Router’a tıklıyoruz ve Physical bölümüne geliyoruz. Router’ı off yapıp <code class="highlighter-rouge">HWIC-2T</code> kartı ekliyoruz. Sonra bu işlem bitince tekrar router’ı On yapıp işlemlere devam ediyoruz. Router-Router arası ise yine copper-cross-over kablo kullanıldı. Switch-Cihaz arası da copper-straight-through kablo ile bağlantı gerçekleştirildi.</p>
+
+<h6>Bağlantı için seçilen Interface : </h6>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>İstanbul - Ankara : Gig 0/0 - Gig 0/0 
+İstanbul - Bursa  : Gig 0/1 - Gig 0/1	
+Ankara   - İzmir  : Gig 0/1 - Gig 0/1
+Bursa    - İzmir  : Gig 0/0 - Gig 0/0
+</code></pre></div></div>
+
+<h6>Router-Switch arası seçilen Interface : </h6>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>İstanbul - Switch : Gig 0/2 - Gig 0/2
+Ankara   - Switch : Gig 0/2 - Gig 0/2
+Bursa    - Switch : Gig 0/2 - Gig 0/2
+İzmir    - Switch : Gig 0/2 - Gig 0/2
+</code></pre></div></div>
+
+<p>      Bu switchlerin her birine bağlı ikişer adet End-Device eklendi. Bu end-device’lar için bağlantı copper-straight-through kablo ile sağlandı.</p>
+
+<h6>Switch - Cihaz Arası seçilen Interface : </h6>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Switch - Laptop : Fa 0/1
+Switch - PC     : Fa 0/2
+</code></pre></div></div>
+
+<p>olarak tüm cihazlar için aynı şekilde seçildi.</p>
+
+<p>      Bu aşamadan sonra Packet Tracer üzerinde Switch-Cihaz arası bağlantıların yeşil ışık yaktığını fakat Router ile olan bağlantılar arası kırmızı durumda olduğunu görüyoruz. Bunun nedeni routerlar için bacaklar default olarak down şeklindedir. Bu bacakları konfigüre etmeye başlarken up durumuna getiriyoruz.</p>
+
+<p>      Bu aşamadan sonra routerlar için konfigürasyon işlemine başlandı. Bacaklara ip adresi verildi ve arada dummy network kurma işlemi gerçekleştirildi.</p>
+
+<p>      Packet tracer üzerinde <code class="highlighter-rouge">CLI (Command Line Interface)</code> bölümüne gidildi ve aşağıdaki aşamaları izlendi :</p>
+
+<h5>Ankara Router : </h5>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Router&gt;enable
+Router#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+Router(config)#interface Gig 0/0
+Router(config-if)#ip address 192.168.1.1 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/0, changed state to up
+Router(config-if)#exit
+Router(config)#interface Gig 0/1
+Router(config-if)#ip address 192.168.2.1 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/1, changed state to up
+Router(config-if)#exit
+Router(config)#exit
+
+Router&gt;enable
+Router#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+Router(config)#interface Gig 0/2
+Router(config-if)#ip address 172.18.0.1 255.255.0.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/2, changed state to up
+%LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/2, changed state to up
+Router(config-if)#exit
+Router(config)#
+
+Router(config)#router eigrp 20
+Router(config-router)#no aut
+Router(config-router)#network 192.168.2.0
+Router(config-router)#network 192.168.1.0
+Router(config-router)#network 172.18.0.0
+Router(config-router)#exit
+Router(config)#
+</code></pre></div></div>
+
+<h5>İstanbul Router :</h5>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Router&gt;enable
+Router#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+Router(config)#interface Gig 0/0
+Router(config-if)#ip address 192.168.1.2 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/0, changed state to up
+%LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/0, changed state to up
+Router(config-if)#exit
+Router(config)#interface Gig 0/1
+Router(config-if)#ip address 192.168.3.2 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/1, changed state to up
+Router(config-if)#exit
+Router(config)#
+
+Router&gt;enable
+Router#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+Router(config)#interface Gig 0/2
+Router(config-if)#ip address 172.15.0.1 255.255.0.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/2, changed state to up
+%LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/2, changed state to up
+Router(config-if)#exit
+Router(config)#exit
+
+Router#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+Router(config)#router eigrp 20
+Router(config-router)#no aut
+Router(config-router)#network 192.168.1.0
+Router(config-router)#
+%DUAL-5-NBRCHANGE: IP-EIGRP 20: Neighbor 192.168.1.1 (GigabitEthernet0/0) is up: new adjacency
+Router(config-router)#network 192.168.3.0
+Router(config-router)#network 172.15.0.0
+Router(config-router)#exit
+Router(config)#
+</code></pre></div></div>
+
+<h5>Bursa Router : </h5>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Router&gt;enable
+Router#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+Router(config)#interface Gig 0/1
+Router(config-if)#ip address 192.168.3.1 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/1, changed state to up
+%LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/1, changed state to up
+Router(config-if)#exit
+Router(config)#interface Gig 0/0
+Router(config-if)#ip address 192.168.4.1 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/0, changed state to up
+Router(config-if)#exit
+Router(config)#
+
+Router&gt;enable
+Router#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+Router(config)#interface Gig 0/2 
+Router(config-if)#ip address 172.16.0.1 255.255.0.0
+Router(config-if)#no sh
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/2, changed state to up
+%LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/2,	changed state to up
+Router(config-if)#exit
+Router(config)#
+
+Router(config)#router eigrp 20
+Router(config-router)#no aut
+Router(config-router)#network 192.168.4.0
+Router(config-router)#
+%DUAL-5-NBRCHANGE: IP-EIGRP 20: Neighbor 192.168.4.2 (GigabitEthernet0/0) is up: new adjacency
+Router(config-router)#network 192.168.3.0
+Router(config-router)#
+%DUAL-5-NBRCHANGE: IP-EIGRP 20: Neighbor 192.168.3.2 (GigabitEthernet0/1) is up: new adjacency
+Router(config-router)#network 172.16.0.0
+Router(config-router)#exit
+Router(config)#
+</code></pre></div></div>
+
+<h5>İzmir Router : </h5>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Router&gt;enable
+Router#configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+Router(config)#interface Gig 0/0
+Router(config-if)#ip address 192.168.4.2 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/0, changed state to up
+%LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/0, changed state to up
+Router(config-if)#exit
+Router(config)#interface Gig 0/1
+Router(config-if)#ip address 192.168.2.2 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/1, changed state to up
+%LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/1, changed state to up
+Router(config-if)#exit
+Router(config)#
+
+Router(config)#interface Gig 0/2
+Router(config-if)#ip address 172.17.0.1 255.255.0.0
+Router(config-if)#no shutdown
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/2, changed state to up
+%LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/2, changed state to up
+Router(config-if)#exit
+Router(config)#
+
+Router(config)#router eigrp 20
+Router(config-router)#no aut
+Router(config-router)#network 192.168.2.0
+Router(config-router)#
+%DUAL-5-NBRCHANGE: IP-EIGRP 20: Neighbor 192.168.2.1 (GigabitEthernet0/1) is up: new adjacency
+Router(config-router)#network 192.168.4.0
+Router(config-router)#network 172.17.0.0
+Router(config-router)#exit
+Router(config)#
+</code></pre></div></div>
+
+<p>      Bacaklara ip verip up yapma aşamasından sonra tüm routerlar için birbiri arası bağlantı yeşil ışık yaktı . Bu aşamadan sonra o routerlar için kendi iç network için konfigurasyon olayına başlandı. Bu işlem bittikten sonra EIGRP 20 routing gerçekleştirildi.</p>
+
+<h4>DHCP</h4>
+
+<p>      İstanbul, Ankara ve Bursa Networkleri için birer DHCP-Server konfigürasyonu yapıp ip adreslerini bu server üzerinden dağıtılsı. İzmir için ise Router üzerinden DHCP konfigurasyonu gerçekleştirildi.</p>
+
+<p>      Packet Tracer Üzerinde DHCP Server Kurulumu : Server nesnesine tıklandığında  arayüze girilir. Sonra Services -&gt; DHCP adımını izliyoruz.Service ON yaptıktan sonra Default Gateway,Start IP Address ve Subnet Mask bölümlerini doldurulur ve kayıt edilir. Devamında  Desktop -&gt; IP konfigürasyon bölümünden statik ip yapılandırması gerçekleştirilir.</p>
+
+<h5>İzmir DHCP (Router)</h5>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Router&gt;enable
+Router#conf t
+Enter configuration commands, one per line.  End with CNTL/Z.
+Router(config)#ip dhcp pool ip10
+Router(dhcp-config)#net 172.17.0.0 255.255.0.0
+Router(dhcp-config)#default 172.17.0.1
+Router(dhcp-config)#ip dhcp exc 172.17.0.1 172.17.0.10
+Router(config)#
+</code></pre></div></div>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

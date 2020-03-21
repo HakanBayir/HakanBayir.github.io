@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Jekyll İle Blog Oluşturma</title>
+  <meta name="description" content="      Jekyll , Ruby kullanılarak yazılmış bir statik site üreticisidir. Jekyll, markdown ve scss formatında yazdığımız yazıları html ve css kodlarına çevirer...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/03/14/jekyll-ile-blog-kurulumu.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Jekyll İle Blog Oluşturma</h1>
+    <p class="post-meta"><time datetime="2017-03-14T00:00:00+03:00" itemprop="datePublished">Mar 14, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Jekyll , Ruby kullanılarak yazılmış bir statik site üreticisidir. Jekyll, markdown ve scss formatında yazdığımız yazıları html ve css kodlarına çevirerek  sitemizi üretir. Bilgisayarımıza ‘RubyGems’ ile jekyll kurmak için aşağıdaki komutu terminale yazabilirsiniz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gem install jekyll 
+</code></pre></div></div>
+
+<p>      Jekyll artık kuruldu. Şimdi statik blog sitemizi oluşturma aşamasına geçebiliriz. Site klasörümüzü 
+oluşturmak istediğimiz dizine gidip aşağıdaki komutları girerek site klasörünü meydana getirebiliriz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jekyll new klasor_adi
+</code></pre></div></div>
+
+<p>      Klasörümüz oluşturuldu. İlk komut ile dosyaların olduğu dizine gidip sonrasında ikinci komut ile sitemizi
+localhost’umuzda yayınlayabiliriz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cd klasor_adi
+
+jekyll serve 
+</code></pre></div></div>
+
+<p>      Çalışan servisi tarayıcımızdan http://localhost:4000 adresine giderek görebiliriz. Burada Jekyll’ ın bize 
+default olarak oluşturduğu siteyi göreceğiz. <a href="http://jekyllthemes.org/">http://jekyllthemes.org/</a> adresini ziyaret ederek buradan çevrimiçi tema edinip ,doğrudan  veya üzerinde değişiklikler yaparak kendi blogumuzu düzenleyebiliriz.</p>
+
+<p>      Oluşturduğumuz siteyi github üzerinden yayınlamak için öncelikle bir github hesabımız olması gerekiyor.
+<a href="https://github.com/">https://github.com/</a> adresini ziyaret ederek bir github hesabi açabilirsiniz. Oturum açıp profile girdikten sonra Repository bölümüne gelip buradan da new butonuna tıklayarak yeni bir repository oluşturabiliriz.
+Bu repository bizim blogumuzdaki tüm dosyaları tutacak yer olacak. Repository ‘nin adı, <strong>githubkullaniciadi.github.io</strong> şeklinde olmalıdır. Böylece blog sayfamız için gereken repository ‘i
+ oluşturmuş olduk.  Şimdi sıra sitemizi bu repository ‘e yollamaya geldi. Sitemizi localhost’dan çıkarıp tüm ağlarda tanınır hale getirecek olduğumuz için site klasörümüz içerisindeki <strong>_config.yml</strong> dosyasında bir değişiklik yapmamız gerekiyor. Buradaki</p>
+
+<ul>
+  <li>url : “”</li>
+</ul>
+
+<p>kısmını</p>
+
+<ul>
+  <li>url : “https://githubkullaniciadi.github.io”</li>
+</ul>
+
+<p>olarak düzenliyoruz.</p>
+
+<p>      Şimdi sıra geldi dosyalarımızı github repository’ imize yollamaya. Bunun için terminale gelip aşağıdaki komutları yazabiliriz ve dosyalarımızı gönderebiliriz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cd klasor_adi
+
+git init
+
+git remote add origin https://github.com/githubkullaniciadi/githubkullaniciadi.github.io.git
+
+git add -A
+
+git commit -m "gönderi"
+
+git push origin master
+</code></pre></div></div>
+
+<p>      Jekyll, kullanımı kolay ve github üzerinden çalışabilen güncel bir servistir. Değişiklikler anlamında daha fazla hareket edebilmek için ve kullanışlı olması açısından <strong>Markdown</strong> syntax yapısı araştırılabilir.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

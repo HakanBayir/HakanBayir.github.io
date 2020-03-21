@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Hackfest2016 - Quaoar Writeup</title>
+  <meta name="description" content="      Bu yazımda Quaoar sanal makinesinin çözümünü anlatacağım. Aldığı ip adresikendi ekranında 192.168.2.223 olarak görünüyor. Aynı ekran da bazı ipuçları d...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/07/12/quaoar.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Hackfest2016 - Quaoar Writeup</h1>
+    <p class="post-meta"><time datetime="2017-07-12T00:00:00+03:00" itemprop="datePublished">Jul 12, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Bu yazımda <code class="highlighter-rouge">Quaoar</code> sanal makinesinin çözümünü anlatacağım. Aldığı ip adresi
+kendi ekranında <code class="highlighter-rouge">192.168.2.223</code> olarak görünüyor. Aynı ekran da bazı ipuçları da
+verilmiş.Kullanılması önerilen araçlar nmap,dirb,dirbuster,BurpSmartBuster,
+nikto,wpscan,hydra vb. olarak devam ediyor. Buradaki hydra aracını daha önce 
+biliyordum fakat aktif olarak kullanmadım. Çoğu yazımı yazarken zaten bir
+çok şeyi yeni öğreniyorum.</p>
+
+<p>      O zaman önce nmap ile açık portları bir kontrol edelim.</p>
+
+<p><img src="/img/quaoar/nmap.png" /></p>
+
+<p>      Açık http servisine gidiyoruz ve bizi burada bir resim karşılıyor. “Welcome
+to Quaoar”.Hoşbulduk diyoruz ve nmap taramasında çıkan robots.txt dosyasında /wordpress dizinine gidiyoruz. Wordpress bir site ile karşı karşıya olduğumuz kesinleşti artık. <code class="highlighter-rouge">wpscan</code> aracı ile <code class="highlighter-rouge">user</code>
+taraması yaptım. Wpscan bana bir çok yararlı bilgi verdi. Kullanılan temanın bulunduğu dizini buluyorum.Sonuçta tasarımda değişiklik yapma iznim var. Ben bu değişikliğik hakkımı shell almak için kullanacağım. Bir yandan farklı dizinler bulursam başka neler çıkar diye  <code class="highlighter-rouge">dirb</code> çalıştırdım.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wpscan --url http://192.168.2.223/wordpress --enumerate u
+</code></pre></div></div>
+
+<p><img src="/img/quaoar/wpscan.png" /></p>
+
+<p><img src="/img/quaoar/dirb.png" /></p>
+
+<p>      Wordpress kullanıcılarına ait isimler ve parolaları beraberinde geldi.<code class="highlighter-rouge">wp-admin</code> panelinden admin
+olarak giriş yapıyoruz. Artık durum baya kolay aslında içeri <code class="highlighter-rouge">php-reverse-shell</code> kodu atacağım ve çalıştırıp
+shell alacağım. Tema düzenleme kısmına geldim ve içeriye shell kodumu ekledim.</p>
+
+<p><img src="/img/quaoar/edit-theme.png" /></p>
+
+<p>      Kodun bulunduğu dizinde belli. Wpscan bana bunu söylemişti.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>http://192.168.2.223/wordpress/wp-content/themes/twentyfourteen/404.php
+</code></pre></div></div>
+
+<p>      Kendi makinemde nc açıp sonrada bu sayfaya gittiğimde shell başlıyor. Non-interactive shell’den kurtulmak için python ile shell import ettim.</p>
+
+<p><img src="/img/quaoar/rev-shell.png" /></p>
+
+<p>      Artık eğer root parolasını öğrenirsem root kullanıcısı olabilirim.
+Bunun için wordpress dosyalarını kontrol ettim. Mysql bağlantısı kurmak için root parolası bir yerlere yazılmış olmalıydı. Aradığım parola tabiki <code class="highlighter-rouge">wp-config.php</code> dosyasından geldi.</p>
+
+<p><img src="/img/quaoar/root-password.png" /></p>
+
+<p>      Su ile root girişi yaptım ve <code class="highlighter-rouge">I'm in...</code></p>
+
+<p><img src="/img/quaoar/root.png" /></p>
+
+<h4>Özet : </h4>
+
+<ol>
+  <li>
+    <p>–Önce nmap ile tarama atıp servisleri inceledim. Bu tarama sayesinde <code class="highlighter-rouge">robots.txt</code> dosyası göründü ve beni <code class="highlighter-rouge">wordpress</code> üzerine yönlendirdi.</p>
+  </li>
+  <li>
+    <p>–Başlangıçta verilen ipucunu takip ederek <code class="highlighter-rouge">wpscan</code> aracını kullandım ve admin paneli için giriş bilgilerini buldum</p>
+  </li>
+  <li>
+    <p>–Admin girişi yaptıktan sonra içeri shell yükledim ve <code class="highlighter-rouge">reverse shell</code> aldım.</p>
+  </li>
+  <li>
+    <p>–Sonra root bilgilerini bulmak için wordpress <code class="highlighter-rouge">config</code> dosyasını buldum. Buradaki root şifresi ile
+root olarak giriş yaptım.</p>
+  </li>
+</ol>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

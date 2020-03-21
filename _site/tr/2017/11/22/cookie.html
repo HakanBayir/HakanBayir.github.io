@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Güvenli Cookie</title>
+  <meta name="description" content="Oturum Anahtarı Nedir ? ">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/11/22/cookie.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Güvenli Cookie</h1>
+    <p class="post-meta"><time datetime="2017-11-22T00:00:00+03:00" itemprop="datePublished">Nov 22, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h4>Oturum Anahtarı Nedir ? </h4>
+
+<p>       Web uygulamaları, istemcilerini birbirinden ayırt etmek için belli yöntemlerle oluşturulan, oturum anahtarı denilen yapıları kullanırlar. Oturum anahtarlarının isimleri, uygulamadan uygulamaya farklılık göstererek karşımıza JSESSIONID, PHPSESSID,ASPSESSIONID gibi örnekler ile çıkabilmektedir. Oturum anahtarları ilgili programlama diline ait kütüphaneler ve fonksiyonlar yardımı ile oluşturulabileceği gibi özel metodların kullanımı ve el yordamı ile de oluşturulabilir.  Bu süreç, istemcinin hedef uygulama sunucusuna istek yapması ile başlar. İsteği alan sunucu, istemciye özel oturum anahtarını üretir ve artık kullanıcı bu anahtar ile tanımlanır. Oturum anahtarına ihtiyaç duyulmasının nedeni HTTP protokolünün ‘stateless’ bir yapıda olmasıdır. İstemciye ait bir oturum bilgisi tutulmadığı takdirde, sunucu için yapılan isteklerin her biri birbirinden bağımsızdır. Oturum anahtarlarının taşınmasında ve istemci tarafında saklanmasında yaygın olarak kullanılan yöntem cookie’dir.</p>
+
+<h4>Cookie Nedir ?</h4>
+
+<p>       Bildiğimiz üzere web sayfalarının kullanıcılarını hatırlamaları için herhangi bir hafızaları bulunmaz. Az önce bahsedilen oturum anahtarları aracılığıyla bu işlem gerçekleştirilir. Cookie, oturum anahtarı ve oturum bilgilerinin saklandığı, istemci tarafında bulunan yapıdır. Cookie’ler , istemcinin uygulama ile etkileşimlerini, gezindiği sayfaları, yaptığı giriş bilgilerini, kullanıcı kimlik bilgilerini taşıyabilirler. Örneğin, A uygulamasına kullanıcı bilgileri ile giriş yapıldığında ve aynı uygulamada işlem yapacağımız farklı bir sayfaya geçiş yaptığımızda, A uygulaması bizim hangi kullanıcı olduğumuzu cookie sayesinde anlayacaktır. PHP ile oluşturulan bir cookie aşağıdaki yapıda ve yöntem ile oluşturulmaktadır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//setcookie(name, value, expire, path, domain, secure, httponly);
+
+
+
+<span class="cp">&lt;?php</span>
+    <span class="nv">$cookie_name</span> <span class="o">=</span> <span class="s2">"ctrl"</span><span class="p">;</span>
+    <span class="nv">$cookie_value</span> <span class="o">=</span> <span class="s2">"ctrl"</span><span class="p">;</span>
+    <span class="nv">$secure</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="nv">$httponly</span><span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="nb">setcookie</span><span class="p">(</span><span class="nv">$cookie_name</span><span class="p">,</span> <span class="nv">$cookie_value</span><span class="p">,</span> <span class="nb">time</span><span class="p">()</span> <span class="o">+</span> <span class="p">(</span><span class="mi">60</span><span class="o">*</span><span class="mi">60</span><span class="o">*</span><span class="mi">24</span><span class="p">),</span> <span class="s2">"/"</span><span class="p">,</span><span class="s2">"localhost"</span><span class="p">,</span><span class="nv">$secure</span><span class="p">,</span><span class="nv">$httponly</span><span class="p">);</span>
+<span class="cp">?&gt;</span>
+</code></pre></div></div>
+
+<h4>Güvenli Cookie'de Bulunması Gereken Özellikler </h4>
+
+<p><code class="highlighter-rouge">1.</code> HTTPS protokolü ile çalışan uygulamalarda cookie için <code class="highlighter-rouge">secure</code> özelliği aktif edilmelidir.</p>
+
+<p><code class="highlighter-rouge">2.</code> Cross Site Scripting gibi bir zafiyetin istismari sonucunda, tarayıcı üzerinden script çalıştırılarak cookie bilgisinin alınamaması için <code class="highlighter-rouge">HttpOnly</code> özelliği aktif edilmelidir.</p>
+
+<p><code class="highlighter-rouge">3.</code> İlgili uygulama dışında diğer uygulamaların,subdomainlerin etkilenmemesi için cookie içerisinde <code class="highlighter-rouge">domain</code> ve <code class="highlighter-rouge">path</code> bilgileri verilmelidir.</p>
+
+<p><code class="highlighter-rouge">4.</code>  Expires ve Max-Age değerleri öncesinde atanmış olan ve tarayıcı kapatılsa bile hala ömrünü sürdürmeye devam edebilen <code class="highlighter-rouge">persistent cookie</code> gerekmedikçe kullanılmamalıdır.</p>
+
+<p><code class="highlighter-rouge">5.</code> Cookie oluşturulurken, yaygın algoritmalar ve metodlar tercih edilmemelidir.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

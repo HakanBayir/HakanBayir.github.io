@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Stack Üzerinde Temel İşlemler</title>
+  <meta name="description" content="      Eleman ekleme ve çıkarma işlemlerini array’in sadece bir ucundan yapabildiğimiz veri yapılarına stack denir. Stack LIFO(last-in-first-out) kuralıyla ça...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/08/10/stack.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Stack Üzerinde Temel İşlemler</h1>
+    <p class="post-meta"><time datetime="2017-08-10T00:00:00+03:00" itemprop="datePublished">Aug 10, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Eleman ekleme ve çıkarma işlemlerini array’in sadece bir ucundan yapabildiğimiz veri yapılarına <code class="highlighter-rouge">stack</code> denir. Stack <code class="highlighter-rouge">LIFO(last-in-first-out)</code> kuralıyla çalışır ve ara elemanlara erişime izin vermez. Dizi veri yapısında bir elemana ulaşmak istendiğinde indis numarasını kullanarak erişim sağlanıyordu. Stack veri yapısında bir veriye ulaşmak için bir sıraya uymak zorundayız.</p>
+
+<p>      Aşağıdaki örnekte array kullanarak stack ile ilgili temel işlemleri yaptım. <code class="highlighter-rouge">top_of_stack</code> değişkeni array’ın en üstündeki elemanın sırasını ifade ediyor. array’a eleman ekleneceğinde bu değişken artırılıyor. array’dan eleman çıkarılacağında bu değişken azaltılıyor.  Aynı zamanda bu değişken ile o an dizinin boş ya da dolu olup olmadığı kontrol ediliyor.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include&lt;iostream&gt;
+
+#define SIZE 10
+
+using namespace std;
+
+class Stack{
+public: 
+    int elements[SIZE];
+    int top_of_stack;
+    Stack();
+    int empty();
+    int full();
+    int push(int);
+    int pop();
+    void display();
+
+};
+
+
+
+Stack::Stack(){
+    top_of_stack=-1;
+
+}
+
+int Stack::empty(){
+    if(top_of_stack==-1)
+    return 1;
+    else
+    return 0;
+}
+
+int Stack::full(){
+    if(top_of_stack==(SIZE-1))
+    return 1;
+    else
+    return 0;
+}
+
+int Stack::push(int element){
+    if(full())
+    {
+        cout &lt;&lt; "Stack dolu" &lt;&lt; endl;
+        return 0;
+    }
+    else
+    {
+        top_of_stack++;
+        elements[top_of_stack] = element;
+    }
+}
+
+int Stack::pop(){
+     if(empty())
+    {
+        cout &lt;&lt; "Stack boş" &lt;&lt; endl;
+        return 0;
+    }
+    else
+    {
+        top_of_stack--;
+        
+    }
+    
+}
+
+void Stack::display(){
+    for(int i=0;i&lt;top_of_stack+1;i++)
+        cout &lt;&lt; "İçerideki "&lt;&lt; i &lt;&lt; ". eleman :"  &lt;&lt; elements[i]  &lt;&lt; endl;
+
+}
+
+
+
+int main()
+{
+    Stack stack1;
+    stack1.push(5);
+    stack1.push(7);
+    stack1.push(3);
+    stack1.display();
+    cout &lt;&lt; "**********************" &lt;&lt; endl;
+    stack1.pop();
+    stack1.display();
+    cout &lt;&lt; "**********************" &lt;&lt; endl;
+    stack1.push(19);
+    stack1.display();
+    cout &lt;&lt; "**********************" &lt;&lt; endl;
+    int option;
+    cout &lt;&lt; endl &lt;&lt; endl &lt;&lt; endl;
+    while(cout &lt;&lt; "push=1, pop=2, display=3 giriniz." &lt;&lt; endl &amp;&amp; cin&gt;&gt;option)
+    {
+    
+        if(option==1)
+            {
+                int push_value;
+                cout &lt;&lt; "Eklenecek değer ? = " ;
+                cin &gt;&gt; push_value;
+                stack1.push(push_value);                    
+        }
+        else if(option==2)
+            {
+                stack1.pop();
+        }
+        else if(option==3)
+            {
+                stack1.display();
+                cout &lt;&lt; "**********************" &lt;&lt; endl;
+        }
+}}
+</code></pre></div></div>
+
+<p><img src="/img/stack/stack.png" /></p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

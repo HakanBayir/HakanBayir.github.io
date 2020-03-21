@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Thread-MultiThreading Örneği (C)</title>
+  <meta name="description" content="Thread nedir ?">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/04/21/multi-threads-example.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Thread-MultiThreading Örneği (C)</h1>
+    <p class="post-meta"><time datetime="2017-04-21T00:00:00+03:00" itemprop="datePublished">Apr 21, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h4>Thread nedir ?</h4>
+
+<p>      Sistemimizde çalışan her programa process(<strong>süreç</strong>) denir. Bu processler
+de kendi içerisinde dallanıp <strong>alt süreçler</strong>i oluşturabilir. Bu alt süreçler aynı anda çalışabilir ve aynı kaynakları kullanabilir. Eş zamanlı çalışmaya yardımcı olan ve aynı process’in işlerini yürüten bu süreçlere <strong>Thread</strong> denir.</p>
+
+<p>      Bu yazımda <strong>C</strong> programlama diliyle yazdığım bir <strong>thread</strong> örneğini inceleyeceğiz. Programımız
+temel işlev olarak herhangi bir text dosyası içerisinde istenen kelimenin olup olmadığını
+kontrol ediyor ve buna göre bir sonuç dönüyor. Fonksiyonumuz normalde tek bir dosya içerisinde arama 
+yapacakken thread kullanarak birden fazla dosya için arama mekanizması oluşturduk. Oluşacak thread
+sayımı , okunacak dosya sayısı kadar belirliyorum ve oluşturduğum fonksiyonu bu threadlerle
+bağlıyorum.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pthread_create(&amp;tid[sayac], NULL, &amp;arama, (void *)kelime);
+</code></pre></div></div>
+
+<p>      Bu kodu yazarak threadi oluşturup fonksiyon ile ilişkilendiriyoruz. Bundan sonra thread oluştukça bu
+fonksiyona gidecek. Fonksiyona gidiyor ve yanında parametre olarak aldığı <strong>aranan kelimeyi</strong> de götürüyor. <strong>input_sayisi</strong> değişkeni okunan dosya sayisini temsil ediyor. İlk başta değeri ‘<strong>0</strong>’
+olduğu için önce belirlediğimiz text dosyalarından birincisine gidiyor. Burada string kütüphanesi 
+fonksiyonlarından  ‘<strong>strstr</strong>’ kullandım ve  bu sayede arama işlemini gerçekleştirdim.  Burada tuttuğum
+<strong>kontrol</strong> değişkeni ,aranan kelimenin bulunma durumunu simgeliyor. Eğer aradığımız kelime içeride 
+varsa bu değişkeni <strong>1</strong>, yoksa <strong>2</strong> yapıyoruz. Bu sayede ana fonksiyon üzerinde bu kontrolden yola çıkarak
+sonucu göstereceğim. Burada okunan dosya sayısını da <strong>dosya_sayisi</strong> değişkeni ile tutuyorum , bunu da 
+input dosyalarımızı isimlendirirken kullanacağım. Programımım bu işlemleri oluşturulacak thread 
+sayısı, yani dosya sayısı kadar tekrarlayacaktır.</p>
+
+<p><img src="/img/thread/compile.png" />
+<img src="/img/thread/result.png" /></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include&lt;pthread.h&gt;
+#include&lt;stdio.h&gt;
+#include&lt;string.h&gt;
+#include&lt;stdlib.h&gt;
+#include&lt;unistd.h&gt;
+
+void* arama();
+int kontrol;
+int dosya_sayisi;
+
+int main()
+{
+
+system("clear");
+char kelime[100];
+int sayac=0;
+int thread_sayisi;
+int thread;
+
+printf("File #? ");
+scanf("%d",&amp;thread_sayisi);
+
+thread_sayisi=thread_sayisi+1;
+pthread_t tid[thread_sayisi];
+
+printf("Word? ");
+scanf("%s",kelime);
+
+while(sayac&lt;thread_sayisi)
+{
+
+thread = pthread_create(&amp;tid[sayac], NULL, &amp;arama, (void *)kelime);
+
+if (thread != 0)
+{
+
+printf("\nThread olusturulamadi  :[%s]", strerror(thread));
+}
+
+else
+{
+//	  printf("\n %d Thread oluştu...\n",&amp;tid[count]);
+
+if(kontrol==1)
+{
+printf("inputThread%d.txt -&gt; ",dosya_sayisi);
+printf("true\n");
+
+}
+
+if(kontrol==2)
+{
+printf("inputThread%d.txt -&gt; ",dosya_sayisi);
+printf("false\n");
+
+}
+
+
+}
+
+pthread_join(tid[sayac],NULL);
+sayac++;
+
+
+}
+
+sleep(5);
+return 0;
+
+
+
+
+}
+
+int input_sayisi = 0;
+char *fname1 = "inputThread1.txt";
+char *fname2 = "inputThread2.txt";
+char *fname3 = "inputThread3.txt";
+char *fname4 = "inputThread4.txt";
+char *fname5 = "inputThread5.txt";
+
+
+void *arama(char *kelime) 
+{
+
+
+
+
+FILE *fp;
+
+int find_result = 0;
+
+char temp[512];
+
+
+
+
+if(input_sayisi==0 &amp;&amp;(fp = fopen(fname1, "r")) == NULL) {
+
+return 0;
+
+}
+
+if(input_sayisi==1 &amp;&amp;(fp = fopen(fname2, "r")) == NULL) {
+
+return 0;
+
+}
+
+if(input_sayisi==2 &amp;&amp;(fp = fopen(fname3, "r")) == NULL) {
+
+return 0;
+
+}
+
+if(input_sayisi==3 &amp;&amp;(fp = fopen(fname4, "r")) == NULL) {
+
+return 0;
+
+}
+
+if(input_sayisi==4 &amp;&amp;(fp = fopen(fname5, "r")) == NULL) {
+
+return 0;
+
+}
+
+if(input_sayisi==5)
+
+{
+
+return ;
+
+}
+
+input_sayisi++;
+
+
+
+while(fgets(temp, 512, fp) != NULL) {
+
+if((strstr(temp, kelime)) != NULL) {
+
+find_result++;
+kontrol =1 ;
+dosya_sayisi++;
+
+}
+
+
+}
+
+
+if(find_result == 0) {
+
+kontrol = 2;
+dosya_sayisi++;
+}
+
+
+if(fp) {
+
+fclose(fp);
+
+}
+
+
+
+}
+</code></pre></div></div>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

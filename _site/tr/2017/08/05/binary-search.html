@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Binary Search</title>
+  <meta name="description" content="      Binary search sıralı diziler üzerinde çalışan bir algoritmadır. Aranan değer sıralı dizinin en ortasındaki eleman ile kıyaslanır. Bu değer orta değere ...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/08/05/binary-search.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Binary Search</h1>
+    <p class="post-meta"><time datetime="2017-08-05T00:00:00+03:00" itemprop="datePublished">Aug 5, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Binary search sıralı diziler üzerinde çalışan bir algoritmadır. Aranan değer sıralı dizinin en ortasındaki eleman ile kıyaslanır. Bu değer orta değere eşit ise aranan değer bulunmuş demektir. Bunun dışında eğer orta değerden küçük ise dizinin sol tarafında yer aldığını anlarız. Büyük ise arama işlemine dizinin sağ tarafında devam edilir. Dizinin hangi tarafında olduğuna karar verildikten sonra asıl eleman bulunana kadar bu işlem <code class="highlighter-rouge">recursive</code> olarak devam eder.</p>
+
+<p>      Aşağıdaki örnekte sıralı bir dizi oluşturdum. Bu diziyi <code class="highlighter-rouge">binary_search</code> fonksiyonuna gönderdim. Aynı zamanda dizinin boyutu ile ilgili olan first ve last değişkenlerini de fonksiyona yolladım. Bunlar dizinin ortasını bulmaya yönelik değişkenlerdir. Sonrasında küçük veya büyük olma durumuna göre arama gerçekleşecektir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include&lt;iostream&gt;
+
+using namespace std;
+
+
+int binary_search(int array[],int search,int first,int last)
+{
+
+	if(first&gt;last)
+		return (-1);
+
+	int mid = (first+last)/2;
+
+	if(search == array[mid])
+	{
+
+	cout &lt;&lt; array[mid] &lt;&lt; " bulundu." &lt;&lt; endl;
+
+	cout &lt;&lt; mid &lt;&lt; " numaralı sıradadır" &lt;&lt; endl ;
+
+
+	}
+
+
+	else if(search &lt; array[mid])
+	{
+
+	cout &lt;&lt; array[mid] &lt;&lt; " 'den küçüktür." &lt;&lt; endl;
+
+	binary_search(array,search,first,mid-1);
+
+
+	}
+
+	else 
+	{
+
+	cout &lt;&lt; array[mid] &lt;&lt; " 'den büyüktür." &lt;&lt; endl;
+
+	binary_search(array,search,mid+1,last);
+
+	}
+
+}
+
+int main()
+{
+
+
+int array[9];
+int i;
+
+
+for(i=0;i&lt;9;i++)
+{
+
+array[i]=i*3;
+
+}
+
+for(i=0;i&lt;9;i++)
+{
+
+cout &lt;&lt; "Sıra numarası : " &lt;&lt; i &lt;&lt; " -&gt; "&lt;&lt; array[i] &lt;&lt; endl;
+
+}
+
+
+binary_search(array,21,0,8);
+
+
+}
+</code></pre></div></div>
+
+<p><img src="/img/binary-search/binary-search.png" /></p>
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

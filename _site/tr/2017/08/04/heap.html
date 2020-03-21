@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Heap Bellek</title>
+  <meta name="description" content="      Bir veri yapısı oluşturulurken belleğe(RAM) ihtiyaç duyulur. C ve C++ gibi dillerde bellek yönetimi programcının elindedir. Çalışan herhangi bir progra...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/08/04/heap.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Heap Bellek</h1>
+    <p class="post-meta"><time datetime="2017-08-04T00:00:00+03:00" itemprop="datePublished">Aug 4, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Bir veri yapısı oluşturulurken belleğe(<code class="highlighter-rouge">RAM</code>) ihtiyaç duyulur. C ve C++ gibi dillerde bellek yönetimi programcının elindedir. Çalışan herhangi bir programda değişkenler ve metotlar bellekte tutulur. Bu veriler bellekte <code class="highlighter-rouge">statik bellek bölgesi</code>, <code class="highlighter-rouge">run time stack</code> ve <code class="highlighter-rouge">heap bellek bölgesi</code> olmak üzere üç farklı yerde tutulabilirler. Bu yazıda heap bellek bölgesinden bahsedeceğim.</p>
+
+<p>      <code class="highlighter-rouge">Heap</code>; yönetimi kullanıcının elinde olan bir bölgedir. Bir program için bellek gereksinimleri çalışma anında belirlenebilir. Böyle bir durumda programların dinamik olarak bellek tahsis etmesi gerekir. İstendiği zaman yer tahsis edilip, boşaltılabilen bu bellek bölgesine heap denir. Burada oluşan nesneler pointer’lar ile işaret edilir. Buradan yer ayırmak için C dilinde <code class="highlighter-rouge">malloc</code> , C++ dilinde <code class="highlighter-rouge">new</code> kelimesi kullanılır. Bu ayrılan yerleri belleğe  geri döndürmek için C dilinde <code class="highlighter-rouge">free</code>, C++ dilinde <code class="highlighter-rouge">delete</code> kullanılır. Bu adreslere erişmek için bu adreslerin tutulduğu pointer’lara ihtiyaç vardır. Kullanılan bellek bölgesi ile iş bittikten sonra o bölge boşaltılmalıdır. Boşaltılmazsa <code class="highlighter-rouge">garbage</code> denilen çöp durumu oluşur.</p>
+
+<p>      Aşağıdaki yazmış olduğum örnekte dizinin boyutu için heap bellek bölgesinden yer ayrılmıştır. Kullanıcı dizinin kaç elemanlı olacağını dinamik olarak belirtir ve buna göre diziye eleman eklenir. Bu uygulama bu dizideki elemanları küçükten büyüğe sıralamayı sağlıyor.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include&lt;iostream&gt;
+using namespace std;
+int main()
+{
+int size;
+int element;
+int minimum;
+int i=0;
+int j=0;
+int k=0;
+int l=0;
+
+cout &lt;&lt; "Eleman sayısı = ";
+cin &gt;&gt; size; 
+cout &lt;&lt; endl;
+
+int *p = new int[size];
+
+while (i&lt;size)
+{
+cout &lt;&lt; i+1 &lt;&lt; ". eleman = " ; 
+cin &gt;&gt; element;
+cout &lt;&lt; endl;
+p[i]= element;
+i++;
+}
+
+while(j&lt;size)
+{
+cout &lt;&lt; "İçerideki "&lt;&lt; j+1 &lt;&lt; ". eleman'ın adresi :"  &lt;&lt; (p+j)  &lt;&lt; endl;
+cout &lt;&lt; "İçerideki "&lt;&lt; j+1 &lt;&lt; ". eleman :"  &lt;&lt; p[j]  &lt;&lt; endl;
+j++;
+}
+
+cout &lt;&lt; endl &lt;&lt; "Sıralama : " ;
+while(k&lt;size)
+{
+        l=k;
+        minimum = p[l];
+        while(l+1&lt;size)
+        {   
+            if(minimum &lt; p[l+1])
+               {
+                          
+               }
+           
+            else 
+              {
+                minimum = p[l+1];
+                p[l+1] = p[k];  
+                
+                p[k] = minimum;
+                                        
+              }
+        l++;
+        }
+cout &lt;&lt; p[k] &lt;&lt; "," ;
+k++;
+}
+
+cout &lt;&lt; endl;
+delete[] p;
+}
+</code></pre></div></div>
+
+<p><img src="/img/heap/heap.png" /></p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

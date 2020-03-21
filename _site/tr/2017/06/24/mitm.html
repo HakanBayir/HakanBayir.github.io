@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>DNS Spoofing (MITM)</title>
+  <meta name="description" content="      Bu yazımda DNS Spoofing olayını gerçekleştirerek MITM saldırısını anlatacağım. Basit anlamda DNS bir siteye gitmek istediğimizde o site için ip adresin...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/06/24/mitm.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">DNS Spoofing (MITM)</h1>
+    <p class="post-meta"><time datetime="2017-06-24T00:00:00+03:00" itemprop="datePublished">Jun 24, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Bu yazımda DNS Spoofing olayını gerçekleştirerek <code class="highlighter-rouge">MITM</code> saldırısını anlatacağım. Basit anlamda DNS bir siteye gitmek istediğimizde o site için ip adresini bilgisayarımıza tanımlıyor. Bu atak ise bu DNS kayıtlarının yönlendirilmesiyle gerçekleşiyor. Bu uygulama da Ettercap aracını kullanarak DNS Spoofing yapacağım.</p>
+
+<p>      Öncelikle <code class="highlighter-rouge">etter.dns</code> dosyasını düzenleyeceğiz. Bu dosya servislerin ve onların ip adreslerinin bulunduğu dosyadır ve yönlendirmeyi sağlar. Buraya bir kayıt ekleyeceğiz. Bunu <code class="highlighter-rouge">www.kariyer.net</code> olarak seçtim. Ip adresi olarakta kendi bilgisayarımın private ip adresini girdim. Sonra /var/www dizinine bir index.html dosyası oluşturdum ve apache servisi başlattım. Hedef cihaz için spoofing yaptığımda ,hedef tarayıcıdan kariyer.net adresine gitmek istediğinde benim oluşturduğum sahte siteye yönlenecek ve olayı gerçekleştirmiş olacağız. Hedef olarak(<code class="highlighter-rouge">Target2</code>) telefonumu seçtim. Nmap taraması ile ağ üzerindeki ip adresini bulup gerekli ayarları aşağıda belirttiğim gibi yaptım. 
+<br />
+<br /></p>
+
+<p><img src="/img/mitm/etter-dns.png" /></p>
+
+<p>      Etter.dns dosyasını düzenledikten sonra ettercap aracını başlatıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ettercap -G
+</code></pre></div></div>
+
+<p>      Burada yapmamız gereken aşamaları aşağıda sıraladım.</p>
+
+<ol>
+  <li>Sniff -&gt; Unified Sniffing</li>
+  <li>Hosts -&gt; Scan for hosts</li>
+  <li>Hosts -&gt; Hosts lists</li>
+  <li>Default Gateway -&gt; Add to Target 1 , Hedef Cihaz -&gt; Add to Target 2</li>
+  <li>Plugins -&gt; Manage the plugins -&gt; dns_spoof</li>
+  <li>Mitm -&gt; Arp Poisoning (Sniff remote connections)</li>
+  <li>Start -&gt;  Start Sniffing</li>
+</ol>
+
+<p><img src="/img/mitm/ettercap.png" /></p>
+
+<p>      Bu aşamaları ettercap aracı üzerinden doğru bir şekilde gerçekleştirdikten sonra spoofing başlayacak.
+Sonra kontrol etmek için telefonumdan www.kariyer.net adresine gidiyorum ve karşıma oluşturduğum sahte site çıkıyor. 
+<br />
+<br /></p>
+
+<p><img src="/img/mitm/dns-spoofing.jpeg" /></p>
+
+<p>      Böylece DNS Spoofing yöntemiyle MITM saldırısı gerçekleştirmiş olduk. Bu saldırı yöntemiyle sosyal medya hesapları, e-mail, bankacılık uygulama şifreleri elde edilebiliyor.Aynı zamanda karşımıza uyarı niteliğinde farklı siteler çıkarılıp zararlı dosyalar indirmemiz istenebiliyor. <code class="highlighter-rouge">Önlem</code> olarak ilk önce bu gibi önemli işlemleri yaparken güvendiğimiz bir ağa bağlı olduğumuzdan emin olmalıyız. Bunun yanı sıra gideceğimiz sitenin güvenli bir bağlantısı(<code class="highlighter-rouge">https</code>) olduğunu kontrol etmeliyiz. Resimden gördüğümüz gibi bağlantı http yani herhangi bir şifreleme olmayan güvensiz bir bağlantıdır.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

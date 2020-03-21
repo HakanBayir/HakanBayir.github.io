@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>HTTP Restful API ve Virus Total API (Python)</title>
+  <meta name="description" content="      HTPP bir istek-yanıt protokolüdür. İnternet üzerinde bir uygulamaya gitmek için bir HTTP istek yaparız ve HTTP yanıt alırız. Bu yazıda Restful API üzer...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2018/01/31/restful-api-virustotal-python.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">HTTP Restful API ve Virus Total API (Python)</h1>
+    <p class="post-meta"><time datetime="2018-01-31T00:00:00+03:00" itemprop="datePublished">Jan 31, 2018</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      HTPP bir istek-yanıt protokolüdür. İnternet üzerinde bir uygulamaya gitmek için bir HTTP istek yaparız ve HTTP yanıt alırız. Bu yazıda Restful API üzerinde duracağız. Restful API, HTTP protokolünün bir formudur. Öncelikle API kavramından bahsedelim. API (Application Programming Interface), bir uygulama için oluşturulmuş bazı fonksiyonların, başka uygulamalar tarafından çağrılıp, kullanılabilmesine imkan veren, destekleyen yapılardır. Yazılımların birbirleriyle iletişim kurması için belirlenmiş kod dizisidir. API’leri bu yüzden arayüz gibi düşünebiliriz. Farklı yazılımların etkileşimini ve birbirine bağlanabilmesini sağlar. Peki bu Restful API nedir ?</p>
+
+<center><h3>Restful API</h3></center>
+
+<p>      Restful API , internet üzerindeki uygulamalarda ve bulut iletişiminde yaygın olarak kullanılan, uygulama düzeyinde bir protokoldür. Stateless ve cacheless bir yapıdadır. Yapılan her istek benzersizdir. Gelen önceki ve gelebilecek sonraki istekten etkilenmez ve bağlantısı bulunmaz. İstemci-Sunucu bağımsızlığından ve HTTP ile çalıştığından dolayı uygun herhangi bir programlama dili ile test edilebilmektedir. Restful API’nin yapısı aşağıdaki bileşenlerden oluşur.</p>
+
+<p><code class="highlighter-rouge">1. URL</code><br />
+<code class="highlighter-rouge">2. HTTP METHODS</code><br />
+<code class="highlighter-rouge">3. HEADERS</code><br />
+<code class="highlighter-rouge">4. PARAMETERS</code><br />
+<code class="highlighter-rouge">5. DATA</code><br /></p>
+
+<center><h5>URL</h5></center>
+<p>      Uniform Resource Locator, kaynağın bulunduğu ve üzerinden işlemlerin gerçekleştirildiği yoldur. URL, kaynağa doğrudan işaret edebiliyorken, aynı zamanda farklı bir kaynağa veya işleme de yönlendirebilir.</p>
+
+<center><h5>HTTP METHODS</h5></center>
+<p>      GET, POST, PUT, DELETE gibi metodlar ile gerçekleştirilen isteklerdir. Daha geniş bilgi için <a href="http://127.0.0.1:4000/tr/2017/07/14/http.html">buraya</a>
+göz atabilirsiniz.</p>
+
+<h6>GET</h6>
+<p>Basit anlamda, kaynaktan veri talep ederken yapılan istektir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>requests.get(url)
+</code></pre></div></div>
+
+<h6>POST</h6>
+<p>      Sunucuya veri gönderip kaynak oluşturmayı hedeflerken kullandığımız HTTP metodudur.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>requests.post(url, data=data)	
+</code></pre></div></div>
+
+<h6>PUT</h6>
+<p>      Sunucu üzerinde bulunan kaynağı güncellemeyi sağlayan HTTP metodudur.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>requests.put(url, params=params)
+</code></pre></div></div>
+
+<h6>DELETE</h6>
+<p>      Sunucu üzerinden kaynak silmeyi destekleyen yöntemdir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>requests.delete(url)
+</code></pre></div></div>
+
+<center><h5>HEADERS</h5></center>
+
+<p>      İstek ve yanıtların içeriklerini işlemek için kullanılan bilgileri içerir. WEB servisi tarafından desteklenen veri tipleri ile ilgili bilgiler burada yer alır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{ 'Content-type' : 'text/html' }
+</code></pre></div></div>
+
+<center><h5>PARAMETERS</h5></center>
+
+<p>      URL üzerinde parametre olarak değerlerin gönderildiği durumlar için, yapılan HTTP isteğinin içinde bu bölüm yer alır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{ 'apikey': api_key, 'resource': hash }
+</code></pre></div></div>
+
+<center><h5>DATA</h5></center>
+
+<p>      İsteğin içinde gönderilecek veriler burada bulunur.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{ 'username' : user, 'password' : passwd }
+</code></pre></div></div>
+
+<center><h3>Virus Total API - Python ile Hash ve URL Arama Örneği </h3></center>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	import requests
+
+	api_key = ''
+	hash = '7657fcb7d772448a6d8504e4b20168b8'
+	target_url = 'http://www.hakanbayir.com'
+
+	def hash_search():
+	    url = 'https://www.virustotal.com/vtapi/v2/file/report'
+	    parameters = {'apikey': api_key, 'resource': hash}
+	    headers = {"Accept-Encoding": "gzip, deflate"}
+
+	    r = requests.post(url, headers=headers, params=parameters)
+
+	    result = r.json()
+
+	    scanner = result['scans']
+
+	    scanner_count = 1
+	    for i in scanner:
+		     print scanner_count , " : ", i, " - " , scanner[i] , '\n'
+		     scanner_count = scanner_count + 1
+
+
+	def url_search():
+	    url = 'http://www.virustotal.com/vtapi/v2/url/report'
+	    parameters = {'apikey' : api_key , 'resource' : target_url}
+	    headers = {"Accept-Encoding": "gzip, deflate"}
+
+	    r = requests.post(url, headers=headers, params=parameters)
+
+	    result = r.json()
+
+	    scanner = result['scans']
+
+	    scanner_count = 1
+	    for i in scanner:
+		     print scanner_count , " : ", i, " - " , scanner[i] , '\n'
+		     scanner_count = scanner_count + 1
+
+
+	if __name__ == '__main__':
+	    print "[1]. Hash Search" , "\n"
+	    print "[2]. URL Search" , "\n"
+
+	    print "Choose Search Options : "
+	    option = raw_input()
+
+	    if option == '1':
+		     hash_search()
+	    elif option == '2':
+		     url_search()
+</code></pre></div></div>
+
+<center><h5>Hash Arama Çıktısı</h5></center>
+<p><img src="/img/virustotal/hash_search.png" /><br /><br /></p>
+<center><h5>URL Arama Çıktısı</h5></center>
+<p><img src="/img/virustotal/url_search.png" /><br /></p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

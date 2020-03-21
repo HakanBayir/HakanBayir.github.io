@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Stapler 1 Writeup</title>
+  <meta name="description" content="      Bu yazımda Stapler sanal makinesinin çözümünü anlatacağım. Önce netdiscoveraracı ile hedefin ip adresini tespit ediyoruz.">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/07/31/stapler.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Stapler 1 Writeup</h1>
+    <p class="post-meta"><time datetime="2017-07-31T00:00:00+03:00" itemprop="datePublished">Jul 31, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      Bu yazımda Stapler sanal makinesinin çözümünü anlatacağım. Önce <code class="highlighter-rouge">netdiscover</code>
+aracı ile hedefin ip adresini tespit ediyoruz.
+<br /><br /></p>
+
+<p><img src="/img/stapler/netdiscover.png" /></p>
+
+<p>      Ip adresi <code class="highlighter-rouge">192.168.1.59</code> olarak görünüyor. Şimdi nmap ile açık olan servisleri
+ayrıntılı bir şekilde görüntülemeye yönelik bir tarama yapıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Not : nmap -A: İşletim sistemi algılama, sürüm algılama, script tarama ve traceroute'yi etkinleştir.
+</code></pre></div></div>
+
+<p><img src="/img/stapler/nmap.png" /></p>
+
+<p>      Burada FTP, SSH, HTTP gibi önemli servisleri görüyoruz. -A taraması sonucuna
+göre FTP Anonymous girişe izin veriyor. FTP servisine giriş denemesinde
+bulunuyoruz ve başarılı oluyor. <code class="highlighter-rouge">ls</code> ile içeride neler var acaba diye bakarken 
+<code class="highlighter-rouge">note</code> dosyası dikkatimi çekiyor. Bu note bize Elly isimli kullanıcının
+dosyalar ile ilgili bazı yetkileri olduğunu anlatmaya çalışıyor. ftp 
+servisine Elly isimli kullanıcı olarak bağlanırsak bazı önemli dosyalara
+erişebiliriz düşüncesi beni heyecanlandırıyor. 
+<br /><br /></p>
+
+<p><img src="/img/stapler/anonymous-ftp.png" /></p>
+
+<p>      Ortada pek fazla bir ipucu yok. Bu konuda internetten biraz kopya çektim ve kullanıcı adının tersi olduğunu gördüm. Yine de teknik olması açısından crunch ile küçük bir wordlist oluşturdum.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>crunch 1 1 -p elly &gt; ellypasswordlist.txt 
+</code></pre></div></div>
+
+<p>      Hydra aracını kullanarak bu wordlist yardımıyla brute force saldırısı gerçekleştirdim. Elly isimli kullanıcıya ait şifre <code class="highlighter-rouge">ylle</code> olarak bulundu.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra -l elly -P ellypasswordlist.txt ftp ://192.168.1.59
+</code></pre></div></div>
+
+<p><img src="/img/stapler/crunch-ftp-bf.png" /></p>
+
+<p>      Elly kullanıcısına ait şifreyi bulduktan sonra SSH bağlantısı yapmayı denedim fakat olmadı. Farklı kullanıcılar için denemelerde bulunmayı düşündüm. Diğer kullanıcıların isimlerini öğrenebileceğim passwd veya shadow dosyalarını bulmaya karar verdim. Artık FTP servisine Elly kullanıcısı olarak bağlantı kurmanın vakti gelmişti.</p>
+
+<p>      passwd dosyasını aldım ve kullanıcı isimlerini ayıkladım. Bu kullanıcı isimleri ile wordlist(<code class="highlighter-rouge">ssh_user.txt</code>) oluşturup ssh brute force saldırısı gerçekleştirdim.</p>
+
+<p>      Bu atağı adım adım metasploit üzerinde şöyle gerçekleştirdim:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>search ssh_login
+use auxiliary/scanner/ssh/ssh_login
+set rhosts 192.168.0.16
+set USERPASS_FILE /root/Masaüstü/ssh_user.txt
+</code></pre></div></div>
+
+<p><img src="/img/stapler/msfconsole.png" /></p>
+
+<p>      SSH ile giriş yaptıktan sonra <code class="highlighter-rouge">uname -a</code> komutu ile sistemin kernel bilgisine baktım. Bu sürümle ilgili internette gerekli olan exploiti arattım. <a href="https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39772.zip"> Şuradan </a>ulaşılabilir.</p>
+
+<p><br /><br /></p>
+
+<p><img src="/img/stapler/uname.png" /></p>
+
+<p>      Bulduktan sonra sayfanın altında nasıl kullanılacağı açıklanmıştı.Hangi dosyaların çalıştırılacağı yazıyordu. <code class="highlighter-rouge">wget</code> ile dosyayı makineye çektim. İçeride <code class="highlighter-rouge">compile.sh</code> dosyasını buldum ve çalıştırdım. Devamında <code class="highlighter-rouge">doubleput</code> dosyasını çalıştırdım ve işlem tamamlandı. 
+Aşamaları takip ederek içeride root yetkisi elde ettim. 
+<br /><br /></p>
+
+<p><img src="/img/stapler/exploit-usage.png" /></p>
+
+<p><img src="/img/stapler/root.png" /></p>
+
+<h4>Özet :</h4>
+
+<ol>
+  <li>–Açık servisleri listeledikten sonra anonymous FTP bağlantı izni olduğunu gördüm.</li>
+  <li>–Anonymous bağlantıyı kurarak içeride önemli bir <code class="highlighter-rouge">note</code> dosyası buldum.</li>
+  <li>–Note dosyasından gelen ipucuna göre FTP brute force ile giriş yaptım.</li>
+  <li>–FTP ile yaptığım giriş sonucu bulduğum kullanıcılardan bir wordlist oluşturdum.</li>
+  <li>–Bu wordlist ile SSH brute force gerçekleştirdim.</li>
+  <li>–SSH bağlantısı sonucu sistemde yetki yükseltecek exploiti buldum ve root yetkisi elde ettim.</li>
+</ol>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

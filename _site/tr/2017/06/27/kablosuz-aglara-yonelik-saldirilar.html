@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>WPA/WPA2 Ağlarına Yönelik Saldırılar</title>
+  <meta name="description" content="      WPA(Wi-Fi Protected Access) ve WPA2(Wi-Fi Protected Access II) kablosuz ağlarda güvenli giriş sağlamak için kullanılan şifreleme yöntemleridir. Daha ön...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/06/27/kablosuz-aglara-yonelik-saldirilar.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">WPA/WPA2 Ağlarına Yönelik Saldırılar</h1>
+    <p class="post-meta"><time datetime="2017-06-27T00:00:00+03:00" itemprop="datePublished">Jun 27, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>      WPA(<code class="highlighter-rouge">Wi-Fi Protected Access</code>) ve WPA2(<code class="highlighter-rouge">Wi-Fi Protected Access II</code>) kablosuz ağlarda güvenli giriş sağlamak için kullanılan şifreleme yöntemleridir. Daha öncesinde kullanılan WEP(<code class="highlighter-rouge">Wired Equivalent Privacy</code>) şifreleme yöntemi yetersiz kaldığı için bu sistemler geliştirilmiştir. WPA ve WPA2 metotlarıyla oluşturulan ağlarda, bağlanmak isteyen cihazlar ve bağlantı noktası arasında her bir oturum için PTK (<code class="highlighter-rouge">Pairwise Transient Key</code>) oluşturulur. Bu anahtarların eşleşmesiyle el sıkışması(<code class="highlighter-rouge">handshake</code>) yapılmış olur.</p>
+
+<p>      Burada WPA/WPA2 koruması olan bir ağa müdahelede bulunup Handshake(kimlik doğrulama paketi) yakalayacağız ve bu paketin içeriğine brute-force saldırısı düzenleyerek kablosuz ağın şifresini öğrenmeye çalışacağız.</p>
+
+<p>      İlk önce <code class="highlighter-rouge">airmon-ng</code> aracını kullanacağız. Normalde ağ kartımız sadece bulunduğu ağdaki bilgileri ve paketleri alabilir. Bu araç sayesinde monitor moda geçerek ağ kartımızın gücü yettiğince etrafımızda yayın yapan tüm ağ bilgilerini gözlemleyebileceğiz.</p>
+
+<p>      İkinci aşama olarak <code class="highlighter-rouge">airodump-ng</code> aracı ile handshake dinlemeye başlayacağız. Eş zamanlı olarak <code class="highlighter-rouge">aireplay-ng</code> aracı ile paket bombardımanı yaparak servisi ya da bağlı olan cihazları o ağdan düşürüp tekrar bağlanmasını bekleyeceğiz. Tekrar bağlanma esnasında el sıkışması sağlanırken ilgili handshake paketini yakalamış olacağız.</p>
+
+<p>      Handshake paketini yakaladıktan sonra <code class="highlighter-rouge">aircrack-ng</code> ile brute-force yaparak parolayı elde etme işlemini gerçekleştireceğiz.</p>
+
+<p><br /></p>
+
+<p><code class="highlighter-rouge">1</code>. Terminalden ağ arayüzüne bakmak(mevcut arayüze göre komut dizisi değişecektir) ve monitor moda geçiş yapmak için aşağıdaki adımları izliyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airmon-ng
+airmon-ng start wlan0
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">2</code>. Sonrasında etrafta yayın yapan ağlara ait bilgileri görmek için aşağıdaki komutu yazıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airodump-ng wlan0mon
+</code></pre></div></div>
+
+<p><img src="/img/wpa-wpa2/tarama.png" /></p>
+
+<p><code class="highlighter-rouge">3</code>. Burada yayın yaptığı <code class="highlighter-rouge">kanal</code> bilgisi ve <code class="highlighter-rouge">MAC</code> adresi işimize yarayacak. Bu işlem ile handshake yakalamaya çalışacağız.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airodump-ng -c 10 -w ctrl --bssid Target_MAC_ADDRESS wlan0mon
+</code></pre></div></div>
+
+<p><img src="/img/wpa-wpa2/handshake.png" /></p>
+
+<p><code class="highlighter-rouge">4</code>. Bir önceki aşama ile eş zamanlı olarak paket bombardımanı başlatıyoruz. Hedefe bağlı cihaz ağdan düşüp tekrar bağlantı kurmaya çalışınca aradaki handshake paketini yakalıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aireplay-ng -0 0 -a Target_MAC_ADDRESS wlan0mon
+</code></pre></div></div>
+
+<p><img src="/img/wpa-wpa2/aireplay.png" /></p>
+
+<p><code class="highlighter-rouge">5</code>. Yakaladığımız handshake paketini aircrack aracı ile brute-force saldırısına maruz bırakıyoruz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aircrack-ng -w wordlist.txt ctrl-01.cap 
+</code></pre></div></div>
+
+<p><img src="/img/wpa-wpa2/aircrack.png" /></p>
+
+<p><br /></p>
+
+<p>      Böylece WPA/WPA2 koruması olan bir ağın parolasını elde etmiş olduk. Buradaki zayıf nokta parolanın yetersizliğidir. Uzun ve güçlü parolalar için brute-force atağı günlerce, aylarca sürebilmektedir. Parolamızı çok kullanılan kelimelerden seçmemeliyiz. Bunun yanı sıra belli bir uzunluğu da olmalıdır. <code class="highlighter-rouge">Uzun ve karmaşık parolalar</code> bu atağa yönelik ciddi güvenlik önlemi sağlar. Bunun yanı sıra modem arayüzünden <code class="highlighter-rouge">ağımızın bilgilerini gizlemekte</code> alabileceğimiz diğer önlemlerden biridir.</p>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

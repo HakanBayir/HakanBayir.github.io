@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Linux Sistemde Kullanıcılar ve Gruplar</title>
+  <meta name="description" content="Kullanıcılar">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/08/02/linux-users-groups.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Linux Sistemde Kullanıcılar ve Gruplar</h1>
+    <p class="post-meta"><time datetime="2017-08-02T00:00:00+03:00" itemprop="datePublished">Aug 2, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h4>Kullanıcılar</h4>
+
+<p>      Linux sisteminde tüm kullanıcı hesaplarına ait bilgiler /etc/passwd dosyasında bulunur. Buradaki bilgilerin zorunlu formatı şu şekildedir :</p>
+
+<p><code class="highlighter-rouge">kullanıcı adı : şifre : hesap no (UID) : grup hesap no (GID) : info : ana dizin (home) : shell</code></p>
+
+<p><br /></p>
+
+<p><code class="highlighter-rouge">Kullanıcı adı(Username)</code> : Kullanıcı için eşsiz olan isimdir.
+<br />
+<code class="highlighter-rouge">Şifre (Password)</code> : Kullanıcıya ait olan şifredir.
+<br />
+<code class="highlighter-rouge">Hesap No. (UID)</code> : Sistemin kullanıcıyı tanımasını sağlayan ve eşsiz olan numaradır. Her kullanıcı için farklı olması gereken bir tamsayıdır. Sistem, bir kullanıcı ile ilgili süreçleri veya dosya izinlerini takip ederken o kullanıcıya ait hesap numarası ile işlem yapar.
+<br />
+<code class="highlighter-rouge">Grup Hesap No. (GID)</code> : Kullanıcının ait olduğu grubun eşsiz olan numarasıdır. Dosyalar üzerindeki izinler belirlenirken önem kazanır. Sistemdeki gruplar /etc/group dosyası içinde yer alır. Gruplar belirli dosyalara belirli yetkilerle erişime izin verilen kullanıcı kümeleridir. 
+<br />
+<code class="highlighter-rouge">Info </code>: Genellikle kullanıcının gerçek adı gibi bilgiler olabilir.
+<br />
+<code class="highlighter-rouge">Ana dizin (home) </code>: Kullanıcının sisteme bağlandığı anda kendinin içeride bulduğu aktif dizinin adıdır.
+<br />
+<code class="highlighter-rouge">Shell </code>: Kullanıcı sisteme girdiği zaman çalışacak komut.(shell)
+<br /></p>
+
+<h5>Sistemde bulunan bazı kullanıcılar </h5>
+
+<p>adm : Kullanıcı hesapları ve log dosyalarının sahibidir.
+<br />
+bin : Executable dosyaların sahibidir.
+<br />
+daemon : Sadece bazı sistem süreçlerinin ve onlara verilecek izinlerin yönetimi için kullanılır.
+<br />
+root : Kullanıcı hesap numarası 0 olan süper kullanıcıdır. Sisteme sınırsız erişim hakkı bulunur.
+<br />
+userctrl:x:700:800::/home/:
+<br />
+ctrl:x:1000:1000:Ctrl:/home/ctrl:/bin/bash
+<br />
+root:x:0:0:root:/root:/bin/bash
+<br /></p>
+
+<h4>Gruplar</h4>
+
+<p>      Her kullanıcı bir ya da birden fazla grubun üyesidir. Belirli bir işlevi yerine getirecek olan kullanıcılar aynı grupta bulunabilir. Gruplar ile ilgili bilgiler /etc/group dosyasında saklanır. Buradaki grupların zorunlu formatı şu şekildedir :</p>
+
+<p><code class="highlighter-rouge">grup adı : grup şifresi : grup no (GID) : kullanıcılar</code></p>
+
+<h5>Sistemde bulunan bazı gruplar </h5>
+
+<p>root::0:root
+<br />
+bin::1:root,bin,daemon
+<br />
+daemon::2:root,bin,daemon
+<br />
+sys::3:root,bin,adm
+<br /></p>
+
+<h5>su Komutu </h5>
+
+<p>      Sistemde bir kullanıcı , başka bir kullanıcı yerine giriş yaparken su komutunu kulllanır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>su root
+su ctrl
+</code></pre></div></div>
+
+<h4>Kullanıcı ve Grup İşlemleri</h4>
+
+<h5>useradd</h5>
+
+<p>      Sisteme kullanıcı eklemek için kullanılır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>useradd userctrl
+passwd userctrl
+id userctrl
+</code></pre></div></div>
+
+<h5>userdel</h5>
+
+<p>      Bu komut ile hedef kullanıcıya ait tüm bilgiler /etc/passwd, /etc/shadow ve /etc/group dosyalarından silinir. -r parametresi ile kullanıcıya ait tüm dosyalar sistemden silinir.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>userdel userctrl
+userdel -r userctrl
+</code></pre></div></div>
+
+<h5>usermod </h5>
+
+<p>      Hedef kullanıcı ile ilgili bilgileri değiştirmek için kullanılır.
+-d parametresi kullanıcının home dizinini değiştirir.
+-l parametresi kullanıcı adını değiştirir.
+-s parametresi shell bilgisini değiştirmek için kullanılır.
+-u parametresi user id (UID) değiştirmek için kullanılır.
+-g parametresi group id (GID) değiştirmek için kullanılır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>usermod -d /home/user1 userctrl
+usermod -l newuserctrl userctrl
+usermod -u 100 userctrl
+usermod -g 800 userctrl
+</code></pre></div></div>
+
+<h5>groupadd</h5>
+
+<p>      Bu komut /etc/group dosyasına yeni bir grup ekler. 
+-g parametresi group id (GID) belirlemek için kullanılır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>groupadd -g 600 groupctrl
+</code></pre></div></div>
+
+<h5>groupdel </h5>
+
+<p>      Hedef grubu /etc/group dosyasından siler.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>groupdel groupctrl
+</code></pre></div></div>
+
+<h5>groupmod </h5>
+
+<p>      Hedef grubun bilgilerini değiştirmek için kullanılır.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>groupmod -g 700 -n newgroupctrl groupctrl
+groupmod -n newgroupctrl groupctrl
+</code></pre></div></div>
+
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>

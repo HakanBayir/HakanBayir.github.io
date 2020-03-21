@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>WEB For Pentester 1 - Commands Injections Bölümü Çözümleri</title>
+  <meta name="description" content="Example 1 ">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tr/2017/10/04/commandexec.html">
+  <link rel="alternate" type="application/rss+xml" title="Hakan Bayır" href="http://localhost:4000/feed.xml">
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-101246969-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</head>
+
+
+  <body>
+      <div class="outer">
+        <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Hakan Bayır</a>
+    
+  </div>
+
+
+
+
+  <div class="header-badge">
+    <a href="/">
+        <img src="/assets/test.jpg" />
+    </a>
+  </div>
+
+    
+</header>
+
+
+        <div class="page-content">
+          <div class="wrapper">
+            <article class="post card" itemscope itemtype="http://schema.org/BlogPosting">
+ <div class="card-content">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">WEB For Pentester 1 - Commands Injections Bölümü Çözümleri</h1>
+    <p class="post-meta"><time datetime="2017-10-04T00:00:00+03:00" itemprop="datePublished">Oct 4, 2017</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h4>Example 1 </h4>
+
+<p>       Arkada çalışan kod :</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>`system("ping -c 2 ".$_GET['ip']);` şeklinde devam ediyor.
+</code></pre></div></div>
+
+<p>      Buraya müdahele için kodun şöyle çalışıp çalışmayacağını düşünebiliriz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>`system("ping -c 2 127.0.0.1;	id);` 
+</code></pre></div></div>
+
+<p>      ping -c 2 127.0.0.1; id komutunu terminalde denediğimizde çalıştığını göreceğiz.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>`http://192.168.0.28/commandexec/example1.php?ip=127.0.0.1;id`
+</code></pre></div></div>
+
+<h4>Example 2 </h4>
+
+<p>      Burada kodda bir regex ifade var ve input’u IP formatının dışında kabul etmeyeceğini söylüyor. Fakat devamında <code class="highlighter-rouge">/m</code> ifadesi var. İnce nokta burada başlıyor. Bu ifade gelen inputu tek bir satır şeklinde kabul ediyor fakat altında başka satırlar olsa bile böyle kabul ediyor. Yani alt satıra geçip inject ifademizi bıraksak bunu okumayıp execute edecek.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>`http://192.168.0.28/commandexec/example2.php?ip=127.0.0.1%0Aid`
+</code></pre></div></div>
+
+<h4>Example 3 </h4>
+
+<p>      Bu kısımda eğer regex’e uygun bir ifade girmezsek bizi aynı sayfaya tekrar yönlendireceğini söylüyor. Fakat devamında bizim girdiğimiz parametreye göre işlemini yapacak. Ama bizi anasayfaya yönlendirdiği için sonuç basmayacak ekrana. Peki sonuçları nasıl görürüz ?</p>
+
+<p>      Parametre olarak  <code class="highlighter-rouge">/commandexec/example3.php?ip=127.0.0.1;id</code> şeklinde bir giriş yaptığımızda bir yandan da <code class="highlighter-rouge">Burp Suite</code> açıyoruz. Repeater’a gönderdiğimiz isteğin response’una baktığımızda aşağıdaki gibi bir sonuç ile karşılaşıyoruz ve buradan komutlarımızın çalıştığını anlıyoruz.</p>
+
+<p><img src="/img/cmdexec/example3.png" /></p>
+
+  </div>
+</div>
+</article>
+
+          </div>
+        </div>
+
+        <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <span class="footer-heading">Hakan Bayır</span>
+    <span class="footer-heading">2017 - 2018</span>
+
+  </div>
+
+</footer>
+
+      </div>
+  </body>
+  
+</html>
